@@ -75,13 +75,14 @@ func raster_geometry(in filename, zs filename, w reporter) (filename, error) {
 	}
 
 	release := capture()
-	_, err = gdal.RasterizeOverwrite(zeros, src, opts)
+	err = gdal.RasterizeOverwrite(zeros, src, opts)
 
 	result := release()
 	if err != nil {
 		return "", errors.New(result)
 	}
 
+	// rasterized.Close()
 	zeros.Close()
 	src.Close()
 
@@ -204,7 +205,7 @@ func raster_crop(in filename, base filename, ref filename, c raster_config, res 
 	}
 
 	release := capture()
-	r_src, err := gdal.Warp(r_out, []gdal.Dataset{src}, r_opts)
+	r_src, err := gdal.Warp(r_out, nil, []gdal.Dataset{src}, r_opts)
 
 	result := release()
 	if err != nil {
@@ -229,7 +230,7 @@ func raster_crop(in filename, base filename, ref filename, c raster_config, res 
 	}
 
 	release1 := capture()
-	dest, err := gdal.Warp(out, []gdal.Dataset{r_src}, c_opts)
+	dest, err := gdal.Warp(out, nil, []gdal.Dataset{r_src}, c_opts)
 
 	result1 := release1()
 	if err != nil {

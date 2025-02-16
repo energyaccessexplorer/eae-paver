@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"git.263.nu/f/srv"
+	"gitlab.com/noop.nu/srv"
 	"io"
 	"io/ioutil"
 	"log"

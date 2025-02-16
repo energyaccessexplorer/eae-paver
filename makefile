@@ -12,6 +12,10 @@ PAVER_CMD = paver \
 	-pubkey ${PAVER_PUBKEY} \
 	-socket ${PAVER_SOCKET}
 
+run:
+	-@pkill -9 paver
+	./${PAVER_CMD}
+
 build:
 	go get
 	go fmt
