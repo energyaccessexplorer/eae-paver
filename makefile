@@ -4,11 +4,6 @@ default: clean build
 
 PAVER_CMD = paver \
 	-server \
-	-role admin \
-	-role leader \
-	-role manager \
-	-role director \
-	-role root \
 	-pubkey ${PAVER_PUBKEY} \
 	-socket ${PAVER_SOCKET}
 

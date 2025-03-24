@@ -5,7 +5,7 @@ go 1.24
 require (
 	github.com/energyaccessexplorer/gdal v0.0.0-20250216091406-3c6cd601bfed
 	github.com/satori/go.uuid v1.2.0
-	gitlab.com/noop.nu/srv v0.0.0-20250111174347-0cddb7f5ad4a
+	gitlab.com/noop.nu/srv v0.0.0-20250324204206-0fe3a996755a
 	nhooyr.io/websocket v1.8.17
 )
 
