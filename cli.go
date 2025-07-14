@@ -56,6 +56,11 @@ func cli() {
 			out, err = routine_subgeographies(p, inputfile, idfield)
 		}
 
+	case "shp":
+		{
+			out = maybe_shp(inputfile)
+		}
+
 	case "zeros":
 		{
 			out, err = raster_zeros(inputfile, 1000, p)

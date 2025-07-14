@@ -1,6 +1,6 @@
 default: clean build
 
-.include .env
+-include .env
 
 PAVER_CMD = paver \
 	-server \

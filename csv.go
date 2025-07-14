@@ -60,9 +60,7 @@ func csv(in filename, fields []string) (filename, error) {
 		var s string
 
 		for i := range indexes {
-			if i == -1 {
-				fmt.Println("next!")
-			} else {
+			if i > -1 {
 				switch f.FieldDefinition(i).Type() {
 				case 0:
 					s = fmt.Sprintf("%d", f.FieldAsInteger(i))
