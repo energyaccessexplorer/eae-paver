@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -39,13 +38,13 @@ func s3sign(strs ...string) string {
 func s3put(fname filename) bool {
 	file, err := os.Open(fname)
 	if err != nil {
-		log.Println(err.Error())
+		logger.Println(err.Error())
 		return false
 	}
 
 	chksum := md5.New()
 	if _, err := io.Copy(chksum, file); err != nil {
-		log.Println(err.Error())
+		logger.Println(err.Error())
 		return false
 	}
 	contentmd5 := base64.StdEncoding.EncodeToString(chksum.Sum(nil))
@@ -82,12 +81,18 @@ func s3put(fname filename) bool {
 		return false
 	}
 
-	c, _ := ioutil.ReadAll(r.Body)
-
-	fmt.Println(r.Status, string(c))
-	fmt.Println(endpoint)
-
 	file.Close()
+
+	c, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		logger.Println(r.Status, err.Error(), c)
+		return false
+	}
+
+	if r.StatusCode > 399 {
+		logger.Println(r.Status, c)
+		return false
+	}
 
 	return true
 }

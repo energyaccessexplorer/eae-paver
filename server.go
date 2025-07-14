@@ -19,11 +19,30 @@ var (
 	roles      arrayFlag
 	tmpdir     string
 	socket     string
+
+	logfile     *os.File
+	logfilename string
+	logger      *log.Logger
 )
 
 type formdata map[string][]byte
 
 type H map[string]srv.Handler
+
+func logger_setup() {
+	var err error
+
+	logfile, err = os.OpenFile(logfilename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	var logbuf bytes.Buffer
+	logger = log.New(&logbuf, "", log.LstdFlags)
+	logger.SetOutput(logfile)
+
+	println("Logging to:", logfilename)
+}
 
 func serve() {
 	check_server_flags()
@@ -46,13 +65,13 @@ func serve() {
 func check_server_flags() {
 	_, err := os.Stat(tmpdir)
 	if os.IsNotExist(err) {
-		log.Println(errors.New("Specified temporary directory does not exist. Creating..."))
+		logger.Println("Specified temporary directory does not exist. Creating...")
 		os.Mkdir(tmpdir, 0755)
 	}
 
 	t, err := os.Open(tmpdir)
 	if err != nil {
-		log.Fatal(errors.New("Specified temporary directory (still) does not exist!"))
+		logger.Fatal("Specified temporary directory (still) does not exist!")
 	}
 	t.Close()
 }

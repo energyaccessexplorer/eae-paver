@@ -53,7 +53,7 @@ func routine_admin_boundaries(w reporter, in filename, idfield string, resolutio
 
 	jinfo, err := json.Marshal(info)
 	if err != nil {
-		fmt.Println(err)
+		return "", err
 	}
 
 	jsonstr := fmt.Sprintf(

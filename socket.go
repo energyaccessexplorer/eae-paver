@@ -14,7 +14,7 @@ var socket_table = map[string]*websocket.Conn{}
 
 func socket_write(s *websocket.Conn, m string, r *http.Request) {
 	if r == nil {
-		fmt.Println(m)
+		logger.Println("socket_write: got a nil request.")
 		return
 	}
 
@@ -32,7 +32,7 @@ func socket_create(id string, w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		logger.Println(err.Error())
 		return
 	}
 

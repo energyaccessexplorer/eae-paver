@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/energyaccessexplorer/gdal"
-	"log"
 	"strconv"
 )
 
@@ -33,7 +32,7 @@ func info_bounds(in filename) gdal.Geometry {
 
 	env, err := layer.Extent(true)
 	if err != nil {
-		log.Println("Failed to get layer extent")
+		logger.Println("Failed to get layer extent")
 		return none
 	}
 
@@ -54,14 +53,14 @@ func info_bounds(in filename) gdal.Geometry {
 
 	v, ok := geom.SpatialReference().AttrValue("AUTHORITY", 1)
 	if !ok {
-		log.Println("Failed setting AUTHORITY to spatial reference")
+		logger.Println("Failed setting AUTHORITY to spatial reference")
 		return none
 	}
 
 	s := gdal.CreateSpatialReference("")
 	i, err := strconv.Atoi(v)
 	if err != nil {
-		log.Println(err.Error())
+		logger.Println(err.Error())
 		return none
 	}
 
@@ -69,7 +68,7 @@ func info_bounds(in filename) gdal.Geometry {
 
 	g, err := gdal.CreateFromWKT(text, s)
 	if err != nil {
-		log.Println(err.Error())
+		logger.Println(err.Error())
 		return none
 	}
 

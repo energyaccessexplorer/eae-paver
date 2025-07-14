@@ -50,9 +50,9 @@ func parse_flags() {
 
 	// SERVER flags
 	//
-	flag.Var(&roles, "role", "Roles permitted in the JWT claims")
 	flag.StringVar(&pubkeyfile, "pubkey", "", "Public key file to check JWTs")
 	flag.StringVar(&socket, "socket", "/tmp/paver-server.sock", "Socket file to run on")
+	flag.StringVar(&logfilename, "log", "/tmp/paver.log", "")
 
 	flag.Parse()
 }
@@ -68,7 +68,7 @@ func _uuid(s string) string {
 func trash(files ...filename) {
 	for _, f := range files {
 		if err := os.Remove(f); err != nil {
-			fmt.Println(err)
+			logger.Println(err.Error())
 		}
 	}
 }
