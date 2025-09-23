@@ -16,7 +16,6 @@ import (
 
 var (
 	pubkeyfile string
-	roles      arrayFlag
 	tmpdir     string
 	socket     string
 
@@ -49,14 +48,13 @@ func serve() {
 
 	fmt.Printf("Temporary directory is '%s'\n", tmpdir)
 	fmt.Printf("Public key is: %s\n", pubkeyfile)
-	fmt.Printf("Roles claim is: %s\n", roles)
 
 	srv.Run(
 		socket,
 		[]srv.Route{
 			{"/check", nil, H{"GET": _check}},
 			{"/socket", nil, H{"GET": _socket}},
-			{"/routines", roles, H{"POST": _routines}},
+			{"/routines", []string{"*"}, H{"POST": _routines}},
 		},
 		pubkeyfile,
 	)

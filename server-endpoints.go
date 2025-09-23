@@ -45,9 +45,7 @@ func _routines(w http.ResponseWriter, r *http.Request) {
 		sid := r.URL.Query().Get("socket_id")
 		s := socket_table[sid]
 
-		jsonstr, err := rtn(r, s)
-
-		if err == nil {
+		if jsonstr, err := rtn(r, s); err == nil {
 			io.WriteString(w, jsonstr)
 		} else {
 			j, _ := json.Marshal(map[string]string{"error": err.Error()})
@@ -75,7 +73,9 @@ func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error)
 		"resolution": nil,
 	}
 
-	err := form_parse(&f, r)
+	if err := form_parse(&f, r); err != nil {
+		return "", err
+	}
 	inputfile, err := snatch(string(f["dataseturl"]))
 	if err != nil {
 		return "", err
@@ -105,7 +105,9 @@ func server_simplify(r *http.Request, s *websocket.Conn) (string, error) {
 		"field":      nil,
 	}
 
-	err := form_parse(&f, r)
+	if err := form_parse(&f, r); err != nil {
+		return "", err
+	}
 	if err != nil {
 		return "", err
 	}
@@ -149,7 +151,9 @@ func server_clip_proximity(r *http.Request, s *websocket.Conn) (string, error) {
 		"simplify":     nil,
 	}
 
-	err := form_parse(&f, r)
+	if err := form_parse(&f, r); err != nil {
+		return "", err
+	}
 	if err != nil {
 		return "", err
 	}
@@ -194,7 +198,9 @@ func server_csv_points(r *http.Request, s *websocket.Conn) (string, error) {
 		"resolution":   nil,
 	}
 
-	err := form_parse(&f, r)
+	if err := form_parse(&f, r); err != nil {
+		return "", err
+	}
 	if err != nil {
 		return "", err
 	}
@@ -241,7 +247,9 @@ func server_crop_raster(r *http.Request, s *websocket.Conn) (string, error) {
 		"resolution":   nil,
 	}
 
-	err := form_parse(&f, r)
+	if err := form_parse(&f, r); err != nil {
+		return "", err
+	}
 	if err != nil {
 		return "", err
 	}
@@ -287,7 +295,9 @@ func server_subgeographies(r *http.Request, s *websocket.Conn) (string, error) {
 		"idcolumn":   nil,
 	}
 
-	err := form_parse(&f, r)
+	if err := form_parse(&f, r); err != nil {
+		return "", err
+	}
 	if err != nil {
 		return "", err
 	}
