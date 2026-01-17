@@ -68,6 +68,7 @@ func _check(w http.ResponseWriter, r *http.Request) {
 
 func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error) {
 	f := formdata{
+		"s3bucket":   nil,
 		"dataseturl": nil,
 		"field":      nil,
 		"resolution": nil,
@@ -76,6 +77,12 @@ func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error)
 	if err := form_parse(&f, r); err != nil {
 		return "", err
 	}
+
+	s3, err := s3config_get(string(f["s3bucket"]))
+	if err != nil {
+		return "", err
+	}
+
 	inputfile, err := snatch(string(f["dataseturl"]))
 	if err != nil {
 		return "", err
@@ -85,6 +92,7 @@ func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error)
 
 	jsonstr, err := routine_admin_boundaries(
 		sw(r, s),
+		s3,
 		inputfile,
 		string(f["field"]),
 		res,
@@ -99,6 +107,7 @@ func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error)
 
 func server_simplify(r *http.Request, s *websocket.Conn) (string, error) {
 	f := formdata{
+		"s3bucket":   nil,
 		"dataseturl": nil,
 		"simplify":   nil,
 		"resolution": nil,
@@ -108,6 +117,8 @@ func server_simplify(r *http.Request, s *websocket.Conn) (string, error) {
 	if err := form_parse(&f, r); err != nil {
 		return "", err
 	}
+
+	s3, err := s3config_get(string(f["s3bucket"]))
 	if err != nil {
 		return "", err
 	}
@@ -129,6 +140,7 @@ func server_simplify(r *http.Request, s *websocket.Conn) (string, error) {
 
 	jsonstr, err := routine_simplify(
 		sw(r, s),
+		s3,
 		inputfile,
 		float32(factor),
 		string(f["field"]),
@@ -144,6 +156,7 @@ func server_simplify(r *http.Request, s *websocket.Conn) (string, error) {
 
 func server_clip_proximity(r *http.Request, s *websocket.Conn) (string, error) {
 	f := formdata{
+		"s3bucket":     nil,
 		"dataseturl":   nil,
 		"referenceurl": nil,
 		"fields":       nil,
@@ -154,6 +167,8 @@ func server_clip_proximity(r *http.Request, s *websocket.Conn) (string, error) {
 	if err := form_parse(&f, r); err != nil {
 		return "", err
 	}
+
+	s3, err := s3config_get(string(f["s3bucket"]))
 	if err != nil {
 		return "", err
 	}
@@ -175,6 +190,7 @@ func server_clip_proximity(r *http.Request, s *websocket.Conn) (string, error) {
 
 	jsonstr, err := routine_clip_proximity(
 		sw(r, s),
+		s3,
 		inputfile,
 		referencefile,
 		strings.Split(string(f["fields"]), ","),
@@ -191,6 +207,7 @@ func server_clip_proximity(r *http.Request, s *websocket.Conn) (string, error) {
 
 func server_csv_points(r *http.Request, s *websocket.Conn) (string, error) {
 	f := formdata{
+		"s3bucket":     nil,
 		"dataseturl":   nil,
 		"referenceurl": nil,
 		"fields":       nil,
@@ -201,6 +218,8 @@ func server_csv_points(r *http.Request, s *websocket.Conn) (string, error) {
 	if err := form_parse(&f, r); err != nil {
 		return "", err
 	}
+
+	s3, err := s3config_get(string(f["s3bucket"]))
 	if err != nil {
 		return "", err
 	}
@@ -224,6 +243,7 @@ func server_csv_points(r *http.Request, s *websocket.Conn) (string, error) {
 
 	jsonstr, err := routine_csv_points(
 		sw(r, s),
+		s3,
 		inputfile,
 		referencefile,
 		[2]string{ll[0], ll[1]},
@@ -240,6 +260,7 @@ func server_csv_points(r *http.Request, s *websocket.Conn) (string, error) {
 
 func server_crop_raster(r *http.Request, s *websocket.Conn) (string, error) {
 	f := formdata{
+		"s3bucket":     nil,
 		"dataseturl":   nil,
 		"baseurl":      nil,
 		"referenceurl": nil,
@@ -250,6 +271,8 @@ func server_crop_raster(r *http.Request, s *websocket.Conn) (string, error) {
 	if err := form_parse(&f, r); err != nil {
 		return "", err
 	}
+
+	s3, err := s3config_get(string(f["s3bucket"]))
 	if err != nil {
 		return "", err
 	}
@@ -275,6 +298,7 @@ func server_crop_raster(r *http.Request, s *websocket.Conn) (string, error) {
 
 	jsonstr, err := routine_crop_raster(
 		sw(r, s),
+		s3,
 		inputfile,
 		basefile,
 		referencefile,
@@ -291,6 +315,7 @@ func server_crop_raster(r *http.Request, s *websocket.Conn) (string, error) {
 
 func server_subgeographies(r *http.Request, s *websocket.Conn) (string, error) {
 	f := formdata{
+		"s3bucket":   nil,
 		"dataseturl": nil,
 		"idcolumn":   nil,
 	}
@@ -298,6 +323,8 @@ func server_subgeographies(r *http.Request, s *websocket.Conn) (string, error) {
 	if err := form_parse(&f, r); err != nil {
 		return "", err
 	}
+
+	s3, err := s3config_get(string(f["s3bucket"]))
 	if err != nil {
 		return "", err
 	}
@@ -311,6 +338,7 @@ func server_subgeographies(r *http.Request, s *websocket.Conn) (string, error) {
 
 	jsonstr, err := routine_subgeographies(
 		sw(r, s),
+		s3,
 		dataseturl,
 		idcolumn,
 	)

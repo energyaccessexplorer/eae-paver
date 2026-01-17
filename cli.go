@@ -29,6 +29,8 @@ func (i *arrayFlag) Set(value string) error {
 }
 
 func cli() {
+	var s3 s3config
+
 	p := func(s string, x ...any) {
 		println(fmt.Sprintf(s, x...))
 	}
@@ -53,7 +55,7 @@ func cli() {
 
 	case "subgeographies":
 		{
-			out, err = routine_subgeographies(p, inputfile, idfield)
+			out, err = routine_subgeographies(p, s3, inputfile, idfield)
 		}
 
 	case "shp":
@@ -138,7 +140,7 @@ func cli() {
 
 	case "admin-boundaries":
 		{
-			out, err = routine_admin_boundaries(nil, inputfile, idfield, 1000)
+			out, err = routine_admin_boundaries(nil, s3, inputfile, idfield, 1000)
 		}
 
 	case "routine-clip-proximity":
@@ -147,7 +149,7 @@ func cli() {
 				panic("No -r (referencefile) given:")
 			}
 
-			out, err = routine_clip_proximity(p, inputfile, referencefile, []string{idfield}, 1000, 0.001)
+			out, err = routine_clip_proximity(p, s3, inputfile, referencefile, []string{idfield}, 1000, 0.001)
 		}
 
 	case "routine-crop-raster":
@@ -160,12 +162,12 @@ func cli() {
 				panic("No -r (referencefile) given:")
 			}
 
-			out, err = routine_crop_raster(nil, inputfile, basefile, referencefile, "{\"nodata\": -1, \"numbertype\": \"Int16\", \"resample\": \"average\"}", 1000)
+			out, err = routine_crop_raster(nil, s3, inputfile, basefile, referencefile, "{\"nodata\": -1, \"numbertype\": \"Int16\", \"resample\": \"average\"}", 1000)
 		}
 
 	case "s3put":
 		{
-			s3put(inputfile)
+			s3put(inputfile, s3)
 		}
 
 	default:

@@ -19,13 +19,7 @@ build:
 	CGO_CFLAGS="-I/usr/local/include" \
 	go build -ldflags "-s \
 		-X main.SOCKET_ACCEPT_PATTERN=${PAVER_SOCKET_ACCEPT_PATTERN} \
-		-X main.tmpdir=${PAVER_TMPDIR} \
-		-X main.S3KEY=${PAVER_S3KEY} \
-		-X main.S3SECRET=${PAVER_S3SECRET} \
-		-X main.S3PROVIDER=${PAVER_S3PROVIDER} \
-		-X main.S3BUCKET=${PAVER_S3BUCKET} \
-		-X main.S3DIRECTORY=${PAVER_S3DIRECTORY} \
-		-X main.S3ACL=${PAVER_S3ACL}"
+		-X main.tmpdir=${PAVER_TMPDIR}"
 
 .export PAVER_CMD
 .export PAVER_SOCKET

@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,27 +16,52 @@ import (
 	"time"
 )
 
-var (
-	S3KEY       string
-	S3SECRET    string
-	S3PROVIDER  string
-	S3BUCKET    string
-	S3DIRECTORY string
-	S3ACL       string
-)
+type s3config struct {
+	Name      string `json:"name"`
+	Key       string `json:"key"`
+	Secret    string `json:"secret"`
+	Provider  string `json:"provide"`
+	Bucket    string `json:"bucket"`
+	Directory string `json:"directory"`
+	ACL       string `json:"acl"`
+}
+
+func s3config_get(name string) (s3config, error) {
+	s3 := s3config{}
+
+	j, err := os.ReadFile("buckets.json")
+	if err != nil {
+		return s3, err
+	}
+
+	var array []s3config
+
+	if err := json.Unmarshal(j, &array); err != nil {
+		return s3, err
+	}
+
+	for _, e := range array {
+		if e.Name == name {
+			s3 = e
+			break
+		}
+	}
+
+	return s3, nil
+}
 
 func s3timestamp() string {
 	return time.Now().UTC().Format(time.RFC1123Z)
 }
 
-func s3sign(strs ...string) string {
-	hash := hmac.New(sha1.New, []byte(S3SECRET))
+func s3sign(secret string, strs ...string) string {
+	hash := hmac.New(sha1.New, []byte(secret))
 	hash.Write([]byte(strings.Join(strs, "\n")))
 
 	return base64.StdEncoding.EncodeToString(hash.Sum(nil))
 }
 
-func s3put(fname filename) bool {
+func s3put(fname filename, s3 s3config) bool {
 	file, err := os.Open(fname)
 	if err != nil {
 		logger.Println(err.Error())
@@ -54,18 +80,19 @@ func s3put(fname filename) bool {
 
 	timestamp := s3timestamp()
 
-	destination := strings.Join([]string{S3BUCKET, S3DIRECTORY, _uuid(fname)}, "/")
+	destination := strings.Join([]string{s3.Bucket, s3.Directory, _uuid(fname)}, "/")
 
 	signature := s3sign(
+		s3.Secret,
 		"PUT",
 		contentmd5,
 		contenttype,
 		timestamp,
-		"x-amz-acl:"+S3ACL,
+		"x-amz-acl:"+s3.ACL,
 		"/"+destination,
 	)
 
-	endpoint := fmt.Sprintf("https://%s/%s", S3PROVIDER, destination)
+	endpoint := fmt.Sprintf("https://%s/%s", s3.Provider, destination)
 
 	client := &http.Client{}
 
@@ -73,8 +100,8 @@ func s3put(fname filename) bool {
 	q.Header.Add("Date", timestamp)
 	q.Header.Add("Content-Type", contenttype)
 	q.Header.Add("Content-MD5", contentmd5)
-	q.Header.Add("X-AMZ-ACL", S3ACL)
-	q.Header.Add("Authorization", fmt.Sprintf("AWS %s:%s", S3KEY, signature))
+	q.Header.Add("X-AMZ-ACL", s3.ACL)
+	q.Header.Add("Authorization", fmt.Sprintf("AWS %s:%s", s3.Key, signature))
 
 	r, err := client.Do(q)
 	if err != nil {

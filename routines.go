@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func routine_admin_boundaries(w reporter, in filename, idfield string, resolution int) (string, error) {
+func routine_admin_boundaries(w reporter, s3 s3config, in filename, idfield string, resolution int) (string, error) {
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
@@ -44,7 +44,7 @@ func routine_admin_boundaries(w reporter, in filename, idfield string, resolutio
 
 		for _, f := range keeps {
 			w("%s -> S3", f)
-			s3put(f)
+			s3put(f, s3)
 			trash(f)
 		}
 	}
@@ -66,7 +66,7 @@ func routine_admin_boundaries(w reporter, in filename, idfield string, resolutio
 	return jsonstr, nil
 }
 
-func routine_simplify(w reporter, in filename, factor float32, idfield string, resolution int) (string, error) {
+func routine_simplify(w reporter, s3 s3config, in filename, factor float32, idfield string, resolution int) (string, error) {
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
@@ -93,7 +93,7 @@ func routine_simplify(w reporter, in filename, factor float32, idfield string, r
 
 		for _, f := range keeps {
 			w("%s -> S3", f)
-			s3put(f)
+			s3put(f, s3)
 			trash(f)
 		}
 	}
@@ -105,7 +105,7 @@ func routine_simplify(w reporter, in filename, factor float32, idfield string, r
 	return jsonstr, nil
 }
 
-func routine_clip_proximity(w reporter, in filename, ref filename, fields []string, resolution int, simplify float32) (string, error) {
+func routine_clip_proximity(w reporter, s3 s3config, in filename, ref filename, fields []string, resolution int, simplify float32) (string, error) {
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
@@ -159,7 +159,7 @@ func routine_clip_proximity(w reporter, in filename, ref filename, fields []stri
 
 		for _, f := range keeps {
 			w("%s -> S3", f)
-			s3put(f)
+			s3put(f, s3)
 			trash(f)
 		}
 	}
@@ -171,7 +171,7 @@ func routine_clip_proximity(w reporter, in filename, ref filename, fields []stri
 	return jsonstr, nil
 }
 
-func routine_csv_points(w reporter, in filename, ref filename, lnglat [2]string, fields []string, resolution int) (string, error) {
+func routine_csv_points(w reporter, s3 s3config, in filename, ref filename, lnglat [2]string, fields []string, resolution int) (string, error) {
 	points, err := csv_points(in, lnglat, fields)
 	if err != nil {
 		return "", err
@@ -216,7 +216,7 @@ func routine_csv_points(w reporter, in filename, ref filename, lnglat [2]string,
 
 		for _, f := range keeps {
 			w("%s -> S3", f)
-			s3put(f)
+			s3put(f, s3)
 			trash(f)
 		}
 	}
@@ -228,7 +228,7 @@ func routine_csv_points(w reporter, in filename, ref filename, lnglat [2]string,
 	return jsonstr, nil
 }
 
-func routine_crop_raster(w reporter, in filename, base filename, ref filename, conf string, resolution int) (string, error) {
+func routine_crop_raster(w reporter, s3 s3config, in filename, base filename, ref filename, conf string, resolution int) (string, error) {
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
@@ -251,7 +251,7 @@ func routine_crop_raster(w reporter, in filename, base filename, ref filename, c
 
 		for _, f := range keeps {
 			w("%s -> S3", f)
-			s3put(f)
+			s3put(f, s3)
 			trash(f)
 		}
 	}
@@ -263,7 +263,7 @@ func routine_crop_raster(w reporter, in filename, base filename, ref filename, c
 	return jsonstr, nil
 }
 
-func routine_subgeographies(w reporter, in filename, id string) (string, error) {
+func routine_subgeographies(w reporter, s3 s3config, in filename, id string) (string, error) {
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
@@ -276,7 +276,7 @@ func routine_subgeographies(w reporter, in filename, id string) (string, error) 
 			r[i] = _uuid(r[i])
 
 			w("%s -> S3", f)
-			s3put(f)
+			s3put(f, s3)
 			trash(f)
 		}
 	}
