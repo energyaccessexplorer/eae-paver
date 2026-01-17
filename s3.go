@@ -29,7 +29,7 @@ type s3config struct {
 func s3config_get(name string) (s3config, error) {
 	s3 := s3config{}
 
-	j, err := os.ReadFile("buckets.json")
+	j, err := os.ReadFile(buckets)
 	if err != nil {
 		return s3, err
 	}

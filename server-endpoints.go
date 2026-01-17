@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"github.com/coder/websocket"
 	"net/http"
-	"nhooyr.io/websocket"
 	"strconv"
 	"strings"
 )
@@ -33,28 +32,27 @@ var server_routines = map[string]server_routine{
 func _routines(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("routine")
 	if q == "" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		io.WriteString(w, "routine query parameter is not optional")
+		http.Error(w, "Routine (q)uery parameter is not optional", 405)
 		return
 	}
 
-	if rtn := server_routines[q]; rtn == nil {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		io.WriteString(w, "don't know what you mean by: "+q)
-	} else {
-		sid := r.URL.Query().Get("socket_id")
-		s := socket_table[sid]
-
-		if jsonstr, err := rtn(r, s); err == nil {
-			io.WriteString(w, jsonstr)
-		} else {
-			j, _ := json.Marshal(map[string]string{"error": err.Error()})
-			w.WriteHeader(http.StatusBadRequest)
-			io.WriteString(w, string(j))
-		}
-
-		defer socket_destroy(sid, s, "routine finished")
+	rtn := server_routines[q]
+	if rtn == nil {
+		http.Error(w, "Unknown routine: "+q, 405)
+		return
 	}
+
+	sid := r.URL.Query().Get("socket_id")
+	s := socket_table[sid]
+
+	if jsonstr, err := rtn(r, s); err == nil {
+		fmt.Fprintf(w, jsonstr)
+	} else {
+		j, _ := json.Marshal(map[string]string{"error": err.Error()})
+		http.Error(w, string(j), 400)
+	}
+
+	defer socket_destroy(sid, s, "routine finished")
 }
 
 func _socket(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +61,7 @@ func _socket(w http.ResponseWriter, r *http.Request) {
 }
 
 func _check(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "TJA!")
+	fmt.Fprintf(w, "TJA!")
 }
 
 func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error) {
@@ -85,7 +83,7 @@ func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error)
 
 	inputfile, err := snatch(string(f["dataseturl"]))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
 	}
 
 	res, _ := strconv.Atoi(string(f["resolution"]))
@@ -97,7 +95,6 @@ func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error)
 		string(f["field"]),
 		res,
 	)
-
 	if err != nil {
 		return "", err
 	}
@@ -125,7 +122,7 @@ func server_simplify(r *http.Request, s *websocket.Conn) (string, error) {
 
 	inputfile, err := snatch(string(f["dataseturl"]))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
 	}
 
 	factor, err := strconv.ParseFloat(string(f["simplify"]), 32)
@@ -175,12 +172,12 @@ func server_clip_proximity(r *http.Request, s *websocket.Conn) (string, error) {
 
 	inputfile, err := snatch(string(f["dataseturl"]))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
 	}
 
 	referencefile, err := snatch(string(f["referenceurl"]))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to fetch reference URL (the dataset bounding processed file) %w", err)
 	}
 
 	res, _ := strconv.Atoi(string(f["resolution"]))
@@ -226,12 +223,12 @@ func server_csv_points(r *http.Request, s *websocket.Conn) (string, error) {
 
 	inputfile, err := snatch(string(f["dataseturl"]))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
 	}
 
 	referencefile, err := snatch(string(f["referenceurl"]))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to fetch reference URL (the dataset bounding processed file) %w", err)
 	}
 
 	res, _ := strconv.Atoi(string(f["resolution"]))
@@ -279,7 +276,7 @@ func server_crop_raster(r *http.Request, s *websocket.Conn) (string, error) {
 
 	inputfile, err := snatch(string(f["dataseturl"]))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
 	}
 
 	basefile, err := snatch(string(f["baseurl"]))
@@ -289,7 +286,7 @@ func server_crop_raster(r *http.Request, s *websocket.Conn) (string, error) {
 
 	referencefile, err := snatch(string(f["referenceurl"]))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to fetch reference URL (the dataset bounding processed file) %w", err)
 	}
 
 	res, _ := strconv.Atoi(string(f["resolution"]))
@@ -331,7 +328,7 @@ func server_subgeographies(r *http.Request, s *websocket.Conn) (string, error) {
 
 	dataseturl, err := snatch(string(f["dataseturl"]))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
 	}
 
 	idcolumn := string(f["idcolumn"])

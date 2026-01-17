@@ -139,7 +139,7 @@ func routine_clip_proximity(w reporter, s3 s3config, in filename, ref filename, 
 	}
 	w("%s <- *clipped", clipped)
 
-	rstr, err := raster_geometry(clipped, zeros, w)
+	rstr, err := raster_geometry_ones(clipped, zeros, w)
 	if err != nil {
 		return "", err
 	}
@@ -196,7 +196,7 @@ func routine_csv_points(w reporter, s3 s3config, in filename, ref filename, lngl
 	}
 	w("%s <- *clipped", clipped)
 
-	rstr, err := raster_geometry(clipped, zeros, w)
+	rstr, err := raster_geometry_ones(clipped, zeros, w)
 	if err != nil {
 		return "", err
 	}

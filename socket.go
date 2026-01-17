@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/coder/websocket"
 	"net/http"
-	"nhooyr.io/websocket"
 	"time"
 )
 

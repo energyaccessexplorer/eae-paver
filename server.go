@@ -18,6 +18,7 @@ var (
 	pubkeyfile string
 	tmpdir     string
 	socket     string
+	buckets    string
 
 	logfile     *os.File
 	logfilename string
@@ -95,7 +96,7 @@ func snatch(location string) (fname string, err error) {
 	}
 
 	if status, ok := uri_test(location); !ok {
-		err = errors.New("Couldn not fetch '" + location + "' - Error: " + strconv.Itoa(status))
+		err = errors.New("Could not fetch '" + location + "' - Error: " + strconv.Itoa(status))
 		return
 	}
 

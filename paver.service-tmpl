@@ -3,7 +3,7 @@ Description=Paver service
 
 [Service]
 User=${PAVER_USER}
-WorkingDirectory=${PAVER_WORKSPACE}
+WorkingDirectory=${PAVER_WORKDIR}
 ExecStartPre=rm -f ${PAVER_SOCKET}
 ExecStart=${PAVER_CMD}
 Restart=always

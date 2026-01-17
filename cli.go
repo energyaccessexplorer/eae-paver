@@ -83,7 +83,7 @@ func cli() {
 				panic("No -t (targetfile) given:")
 			}
 
-			out, err = raster_geometry(inputfile, targetfile, p)
+			out, err = raster_geometry_ones(inputfile, targetfile, p)
 		}
 
 	case "proximity":
@@ -92,7 +92,7 @@ func cli() {
 				panic("No -t (targetfile) given:")
 			}
 
-			r, _ := raster_geometry(inputfile, targetfile, p)
+			r, _ := raster_geometry_ones(inputfile, targetfile, p)
 
 			out, err = raster_proximity(r, p)
 		}

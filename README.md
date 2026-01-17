@@ -13,13 +13,9 @@ Dependencies:
 - S3-compatible bucket
 - JWT authentication
 
-To get started, edit the `.env` to your needs and run (`bmake` in Linux)
+To get started, edit the `.env` to your needs and run
 
 	$ make
-
-**Important**: when compiling the executable the S3 credentials and the JWT key
-are burnt into the binary file. Do **NOT** expect them to be cryptographically
-obscured - compile and deploy to trustworthy locations, OK?
 
 
 ## License

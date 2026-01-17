@@ -2,13 +2,18 @@ default: clean build
 
 -include .env
 
-PAVER_CMD = paver \
+export PAVER_SERVER := ${PAVER_SERVER}
+export PAVER_SOCKET := ${PAVER_SOCKET}
+export PAVER_WORKDIR := ${PAVER_WORKDIR}
+export PAVER_USER := ${PAVER_USER}
+export PAVER_CMD := paver \
 	-server \
 	-pubkey ${PAVER_PUBKEY} \
-	-socket ${PAVER_SOCKET}
+	-socket ${PAVER_SOCKET} \
+	-buckets ${PAVER_BUCKETS}
 
 run:
-	-@pkill -9 paver
+	-@ pkill -9 paver
 	./${PAVER_CMD}
 
 build:
@@ -16,23 +21,17 @@ build:
 	go fmt
 
 	CGO_LDFLAGS="-L/usr/local/lib -lgdal" \
-	CGO_CFLAGS="-I/usr/local/include" \
+	CGO_CFLAGS="-I/usr/local/include -I/usr/include/gdal" \
 	go build -ldflags "-s \
-		-X main.SOCKET_ACCEPT_PATTERN=${PAVER_SOCKET_ACCEPT_PATTERN} \
-		-X main.tmpdir=${PAVER_TMPDIR}"
+		-X main.SOCKET_ACCEPT_PATTERN=${PAVER_SOCKET_ACCEPT_PATTERN}"
 
-.export PAVER_CMD
-.export PAVER_SOCKET
-.export PAVER_WORKSPACE
-.export PAVER_USER
-	@envsubst <paver.service-tmpl >paver.service
+	envsubst <paver.service-tmpl >paver.service
+	cat paver.service
 
 clean:
 	-rm -f paver paver.service
 
-install:
-	bmake build
-
+install: build
 	sudo install -o root -m 755 \
 		paver \
 		/usr/local/bin/
@@ -42,9 +41,10 @@ install:
 		/etc/systemd/system/
 
 deploy:
-	ssh ${PAVER_SERVER} "cd ${PAVER_WORKSPACE}; git stash; git pull; git stash pop;"
+	ssh ${PAVER_SERVER} "cd ${PAVER_SRCDIR}; git stash;"
+	ssh ${PAVER_SERVER} "cd ${PAVER_SRCDIR}; git pull; touch deploy.diff; patch -p1 <deploy.diff;"
 	ssh ${PAVER_SERVER} "sudo systemctl stop paver.service"
-	ssh ${PAVER_SERVER} "cd ${PAVER_WORKSPACE}; bmake install;"
+	ssh ${PAVER_SERVER} "cd ${PAVER_SRCDIR}; make install;"
 	ssh ${PAVER_SERVER} "sudo systemctl daemon-reload"
 	ssh ${PAVER_SERVER} "sudo systemctl start paver.service"
 

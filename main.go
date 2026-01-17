@@ -23,6 +23,8 @@ type filename = string
 func main() {
 	parse_flags()
 
+	logger_setup()
+
 	if run_server {
 		serve()
 	} else if run_cli {
@@ -53,6 +55,10 @@ func parse_flags() {
 	flag.StringVar(&pubkeyfile, "pubkey", "", "Public key file to check JWTs")
 	flag.StringVar(&socket, "socket", "/tmp/paver-server.sock", "Socket file to run on")
 	flag.StringVar(&logfilename, "log", "/tmp/paver.log", "")
+
+	flag.StringVar(&tmpdir, "tmpdir", "/tmp", "")
+
+	flag.StringVar(&buckets, "buckets", "/etc/paver-buckets.json", "")
 
 	flag.Parse()
 }
