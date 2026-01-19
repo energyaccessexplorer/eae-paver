@@ -20,7 +20,7 @@ type s3config struct {
 	Name      string `json:"name"`
 	Key       string `json:"key"`
 	Secret    string `json:"secret"`
-	Provider  string `json:"provide"`
+	Provider  string `json:"provider"`
 	Bucket    string `json:"bucket"`
 	Directory string `json:"directory"`
 	ACL       string `json:"acl"`

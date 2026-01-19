@@ -41,8 +41,7 @@ install: build
 		/etc/systemd/system/
 
 deploy:
-	ssh ${PAVER_SERVER} "cd ${PAVER_SRCDIR}; git stash;"
-	ssh ${PAVER_SERVER} "cd ${PAVER_SRCDIR}; git pull; touch deploy.diff; patch -p1 <deploy.diff;"
+	ssh ${PAVER_SERVER} "cd ${PAVER_SRCDIR}; git stash; git pull; touch deploy.diff; patch -p1 <deploy.diff;"
 	ssh ${PAVER_SERVER} "sudo systemctl stop paver.service"
 	ssh ${PAVER_SERVER} "cd ${PAVER_SRCDIR}; make install;"
 	ssh ${PAVER_SERVER} "sudo systemctl daemon-reload"

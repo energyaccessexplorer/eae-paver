@@ -74,6 +74,10 @@ func server_prepare(f *formdata, r *http.Request) (ok bool, s3 s3config, dataset
 		return false, s3, "", "", 0, err
 	}
 
+	if s3.Provider == "" {
+		return false, s3, "", "", 0, errors.New("No such bucket: " + string((*f)["s3bucket"]))
+	}
+
 	datasetfile, err = snatch(string((*f)["dataseturl"]))
 	if err != nil {
 		return false, s3, "", "", 0, errors.New(fmt.Sprintf("Dataset URL: %s", err))
