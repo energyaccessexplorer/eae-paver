@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-type reporter func(string, ...any)
+type reporter func(string, ...any) string
 
 func sw(r *http.Request, k *websocket.Conn) reporter {
-	return func(s string, x ...any) {
-		socket_write(k, fmt.Sprintf(s+"\n", x...), r)
+	return func(s string, x ...any) string {
+		return socket_write(k, fmt.Sprintf(s+"\n", x...), r)
 	}
 }
 

@@ -31,8 +31,10 @@ func (i *arrayFlag) Set(value string) error {
 func cli() {
 	var s3 s3config
 
-	p := func(s string, x ...any) {
-		println(fmt.Sprintf(s, x...))
+	p := func(s string, x ...any) string {
+		r := fmt.Sprintf(s, x...)
+		println(r)
+		return r
 	}
 
 	if inputfile == "" {

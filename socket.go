@@ -12,13 +12,15 @@ var SOCKET_ACCEPT_PATTERN string
 
 var socket_table = map[string]*websocket.Conn{}
 
-func socket_write(s *websocket.Conn, m string, r *http.Request) {
+func socket_write(s *websocket.Conn, m string, r *http.Request) string {
 	if r == nil {
 		logger.Println("socket_write: got a nil request.")
-		return
+		return ""
 	}
 
 	s.Write(r.Context(), websocket.MessageText, []byte(m))
+
+	return m
 }
 
 func socket_destroy(id string, s *websocket.Conn, m string) {
