@@ -64,40 +64,54 @@ func _check(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "TJA!")
 }
 
-func server_prepare(f *formdata, r *http.Request) (ok bool, s3 s3config, datasetfile string, referencefile string, resolution int, err error) {
+func server_prepare(f *formdata, r *http.Request) (ok bool, s3 s3config, datasetfile string, referencefile string, resolution int, longlat [2]string, err error) {
 	if err = form_parse(f, r); err != nil {
-		return false, s3, "", "", 0, err
+		return
 	}
 
 	s3, err = s3config_get(string((*f)["s3bucket"]))
 	if err != nil {
-		return false, s3, "", "", 0, err
+		return
 	}
 
-	if s3.Provider == "" {
-		return false, s3, "", "", 0, errors.New("No such bucket: " + string((*f)["s3bucket"]))
+	if s3.Key == "" {
+		err = errors.New("No such bucket: " + string((*f)["s3bucket"]))
+		return
 	}
 
 	datasetfile, err = snatch(string((*f)["dataseturl"]))
 	if err != nil {
-		return false, s3, "", "", 0, errors.New(fmt.Sprintf("Dataset URL: %s", err))
+		err = errors.New(fmt.Sprintf("Dataset URL: %s", err.Error()))
+		return
 	}
 
 	if ref, has := (*f)["referenceurl"]; has {
 		referencefile, err = snatch(string(ref))
 		if err != nil {
-			return false, s3, "", "", 0, errors.New(fmt.Sprintf("Reference URL: %w", err))
+			err = errors.New(fmt.Sprintf("Reference URL: %s", err.Error()))
+			return
 		}
 	}
 
 	if res, has := (*f)["resolution"]; has {
 		resolution, err = strconv.Atoi(string(res))
 		if err != nil {
-			return false, s3, "", "", 0, err
+			err = errors.New(fmt.Sprintf("Could not parse resolution: %s", err.Error()))
+			return
 		}
 	}
 
-	return true, s3, datasetfile, referencefile, resolution, nil
+	if ll, has := (*f)["lnglat"]; has {
+		s := strings.Split(string(ll), ",")
+		if len(s) != 2 {
+			err = errors.New("lnglat: should have length 2.")
+			return
+		}
+
+		copy(longlat[:], s[:2])
+	}
+
+	return true, s3, datasetfile, referencefile, resolution, longlat, nil
 }
 
 func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error) {
@@ -108,7 +122,7 @@ func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error)
 		"resolution": nil,
 	}
 
-	ok, s3, datasetfile, _, resolution, err := server_prepare(&f, r)
+	ok, s3, datasetfile, _, resolution, _, err := server_prepare(&f, r)
 	if !ok {
 		return "", err
 	}
@@ -136,7 +150,7 @@ func server_simplify(r *http.Request, s *websocket.Conn) (string, error) {
 		"attr":       nil,
 	}
 
-	ok, s3, datasetfile, _, resolution, err := server_prepare(&f, r)
+	ok, s3, datasetfile, _, resolution, _, err := server_prepare(&f, r)
 	if !ok {
 		return "", err
 	}
@@ -172,7 +186,7 @@ func server_clip_proximity(r *http.Request, s *websocket.Conn) (string, error) {
 		"simplify":     nil,
 	}
 
-	ok, s3, datasetfile, referencefile, resolution, err := server_prepare(&f, r)
+	ok, s3, datasetfile, referencefile, resolution, _, err := server_prepare(&f, r)
 	if !ok {
 		return "", err
 	}
@@ -207,14 +221,9 @@ func server_csv_points(r *http.Request, s *websocket.Conn) (string, error) {
 		"resolution":   nil,
 	}
 
-	ok, s3, datasetfile, referencefile, resolution, err := server_prepare(&f, r)
+	ok, s3, datasetfile, referencefile, resolution, lnglat, err := server_prepare(&f, r)
 	if !ok {
 		return "", err
-	}
-
-	ll := strings.Split(string(f["lnglat"]), ",")
-	if len(ll) != 2 {
-		return "", errors.New("Argument Error: lnglat length should be 2")
 	}
 
 	jsonstr, err := routine_csv_points(
@@ -222,7 +231,7 @@ func server_csv_points(r *http.Request, s *websocket.Conn) (string, error) {
 		s3,
 		datasetfile,
 		referencefile,
-		[2]string{ll[0], ll[1]},
+		lnglat,
 		strings.Split(string(f["fields"]), ","),
 		resolution,
 	)
@@ -244,7 +253,7 @@ func server_crop_raster(r *http.Request, s *websocket.Conn) (string, error) {
 		"resolution":   nil,
 	}
 
-	ok, s3, datasetfile, referencefile, resolution, err := server_prepare(&f, r)
+	ok, s3, datasetfile, referencefile, resolution, _, err := server_prepare(&f, r)
 	if !ok {
 		return "", err
 	}
@@ -280,7 +289,7 @@ func server_subgeographies(r *http.Request, s *websocket.Conn) (string, error) {
 		"attr":       nil,
 	}
 
-	ok, s3, datasetfile, _, _, err := server_prepare(&f, r)
+	ok, s3, datasetfile, _, _, _, err := server_prepare(&f, r)
 	if !ok {
 		return "", err
 	}
