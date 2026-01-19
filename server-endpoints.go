@@ -64,36 +64,57 @@ func _check(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "TJA!")
 }
 
+func server_prepare(f *formdata, r *http.Request) (ok bool, s3 s3config, datasetfile string, referencefile string, resolution int, err error) {
+	if err = form_parse(f, r); err != nil {
+		return false, s3, "", "", 0, err
+	}
+
+	s3, err = s3config_get(string((*f)["s3bucket"]))
+	if err != nil {
+		return false, s3, "", "", 0, err
+	}
+
+	datasetfile, err = snatch(string((*f)["dataseturl"]))
+	if err != nil {
+		return false, s3, "", "", 0, errors.New(fmt.Sprintf("Dataset URL: %s", err))
+	}
+
+	if ref, has := (*f)["referenceurl"]; has {
+		referencefile, err = snatch(string(ref))
+		if err != nil {
+			return false, s3, "", "", 0, errors.New(fmt.Sprintf("Reference URL: %w", err))
+		}
+	}
+
+	if res, has := (*f)["resolution"]; has {
+		resolution, err = strconv.Atoi(string(res))
+		if err != nil {
+			return false, s3, "", "", 0, err
+		}
+	}
+
+	return true, s3, datasetfile, referencefile, resolution, nil
+}
+
 func server_admin_boundaries(r *http.Request, s *websocket.Conn) (string, error) {
 	f := formdata{
 		"s3bucket":   nil,
 		"dataseturl": nil,
-		"field":      nil,
+		"attr":       nil,
 		"resolution": nil,
 	}
 
-	if err := form_parse(&f, r); err != nil {
+	ok, s3, datasetfile, _, resolution, err := server_prepare(&f, r)
+	if !ok {
 		return "", err
 	}
-
-	s3, err := s3config_get(string(f["s3bucket"]))
-	if err != nil {
-		return "", err
-	}
-
-	inputfile, err := snatch(string(f["dataseturl"]))
-	if err != nil {
-		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
-	}
-
-	res, _ := strconv.Atoi(string(f["resolution"]))
 
 	jsonstr, err := routine_admin_boundaries(
 		sw(r, s),
 		s3,
-		inputfile,
-		string(f["field"]),
-		res,
+		datasetfile,
+		string(f["attr"]),
+		resolution,
 	)
 	if err != nil {
 		return "", err
@@ -108,21 +129,12 @@ func server_simplify(r *http.Request, s *websocket.Conn) (string, error) {
 		"dataseturl": nil,
 		"simplify":   nil,
 		"resolution": nil,
-		"field":      nil,
+		"attr":       nil,
 	}
 
-	if err := form_parse(&f, r); err != nil {
+	ok, s3, datasetfile, _, resolution, err := server_prepare(&f, r)
+	if !ok {
 		return "", err
-	}
-
-	s3, err := s3config_get(string(f["s3bucket"]))
-	if err != nil {
-		return "", err
-	}
-
-	inputfile, err := snatch(string(f["dataseturl"]))
-	if err != nil {
-		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
 	}
 
 	factor, err := strconv.ParseFloat(string(f["simplify"]), 32)
@@ -130,18 +142,13 @@ func server_simplify(r *http.Request, s *websocket.Conn) (string, error) {
 		return "", err
 	}
 
-	resolution, err := strconv.Atoi(string(f["resolution"]))
-	if err != nil {
-		return "", err
-	}
-
 	jsonstr, err := routine_simplify(
 		sw(r, s),
 		s3,
-		inputfile,
+		datasetfile,
 		float32(factor),
-		string(f["field"]),
-		int(resolution),
+		string(f["attr"]),
+		resolution,
 	)
 
 	if err != nil {
@@ -161,26 +168,10 @@ func server_clip_proximity(r *http.Request, s *websocket.Conn) (string, error) {
 		"simplify":     nil,
 	}
 
-	if err := form_parse(&f, r); err != nil {
+	ok, s3, datasetfile, referencefile, resolution, err := server_prepare(&f, r)
+	if !ok {
 		return "", err
 	}
-
-	s3, err := s3config_get(string(f["s3bucket"]))
-	if err != nil {
-		return "", err
-	}
-
-	inputfile, err := snatch(string(f["dataseturl"]))
-	if err != nil {
-		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
-	}
-
-	referencefile, err := snatch(string(f["referenceurl"]))
-	if err != nil {
-		return "", fmt.Errorf("Failed to fetch reference URL (the dataset bounding processed file) %w", err)
-	}
-
-	res, _ := strconv.Atoi(string(f["resolution"]))
 
 	_simp, _ := strconv.ParseFloat(string(f["simplify"]), 32)
 	simp := float32(_simp)
@@ -188,10 +179,10 @@ func server_clip_proximity(r *http.Request, s *websocket.Conn) (string, error) {
 	jsonstr, err := routine_clip_proximity(
 		sw(r, s),
 		s3,
-		inputfile,
+		datasetfile,
 		referencefile,
 		strings.Split(string(f["fields"]), ","),
-		res,
+		resolution,
 		simp,
 	)
 
@@ -212,28 +203,12 @@ func server_csv_points(r *http.Request, s *websocket.Conn) (string, error) {
 		"resolution":   nil,
 	}
 
-	if err := form_parse(&f, r); err != nil {
+	ok, s3, datasetfile, referencefile, resolution, err := server_prepare(&f, r)
+	if !ok {
 		return "", err
 	}
 
-	s3, err := s3config_get(string(f["s3bucket"]))
-	if err != nil {
-		return "", err
-	}
-
-	inputfile, err := snatch(string(f["dataseturl"]))
-	if err != nil {
-		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
-	}
-
-	referencefile, err := snatch(string(f["referenceurl"]))
-	if err != nil {
-		return "", fmt.Errorf("Failed to fetch reference URL (the dataset bounding processed file) %w", err)
-	}
-
-	res, _ := strconv.Atoi(string(f["resolution"]))
 	ll := strings.Split(string(f["lnglat"]), ",")
-
 	if len(ll) != 2 {
 		return "", errors.New("Argument Error: lnglat length should be 2")
 	}
@@ -241,11 +216,11 @@ func server_csv_points(r *http.Request, s *websocket.Conn) (string, error) {
 	jsonstr, err := routine_csv_points(
 		sw(r, s),
 		s3,
-		inputfile,
+		datasetfile,
 		referencefile,
 		[2]string{ll[0], ll[1]},
 		strings.Split(string(f["fields"]), ","),
-		res,
+		resolution,
 	)
 
 	if err != nil {
@@ -265,18 +240,9 @@ func server_crop_raster(r *http.Request, s *websocket.Conn) (string, error) {
 		"resolution":   nil,
 	}
 
-	if err := form_parse(&f, r); err != nil {
+	ok, s3, datasetfile, referencefile, resolution, err := server_prepare(&f, r)
+	if !ok {
 		return "", err
-	}
-
-	s3, err := s3config_get(string(f["s3bucket"]))
-	if err != nil {
-		return "", err
-	}
-
-	inputfile, err := snatch(string(f["dataseturl"]))
-	if err != nil {
-		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
 	}
 
 	basefile, err := snatch(string(f["baseurl"]))
@@ -284,23 +250,16 @@ func server_crop_raster(r *http.Request, s *websocket.Conn) (string, error) {
 		return "", err
 	}
 
-	referencefile, err := snatch(string(f["referenceurl"]))
-	if err != nil {
-		return "", fmt.Errorf("Failed to fetch reference URL (the dataset bounding processed file) %w", err)
-	}
-
-	res, _ := strconv.Atoi(string(f["resolution"]))
-
 	configjson := string(f["config"])
 
 	jsonstr, err := routine_crop_raster(
 		sw(r, s),
 		s3,
-		inputfile,
+		datasetfile,
 		basefile,
 		referencefile,
 		configjson,
-		res,
+		resolution,
 	)
 
 	if err != nil {
@@ -314,30 +273,19 @@ func server_subgeographies(r *http.Request, s *websocket.Conn) (string, error) {
 	f := formdata{
 		"s3bucket":   nil,
 		"dataseturl": nil,
-		"idcolumn":   nil,
+		"attr":       nil,
 	}
 
-	if err := form_parse(&f, r); err != nil {
+	ok, s3, datasetfile, _, _, err := server_prepare(&f, r)
+	if !ok {
 		return "", err
 	}
-
-	s3, err := s3config_get(string(f["s3bucket"]))
-	if err != nil {
-		return "", err
-	}
-
-	dataseturl, err := snatch(string(f["dataseturl"]))
-	if err != nil {
-		return "", fmt.Errorf("Failed to fetch dataset URL %w", err)
-	}
-
-	idcolumn := string(f["idcolumn"])
 
 	jsonstr, err := routine_subgeographies(
 		sw(r, s),
 		s3,
-		dataseturl,
-		idcolumn,
+		datasetfile,
+		string(f["attr"]),
 	)
 
 	return jsonstr, nil

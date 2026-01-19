@@ -6,9 +6,8 @@ import (
 )
 
 var (
-	idfield string
-
-	selectfields arrayFlag
+	attr   string
+	fields arrayFlag
 
 	command       string
 	inputfile     string
@@ -57,7 +56,7 @@ func cli() {
 
 	case "subgeographies":
 		{
-			out, err = routine_subgeographies(p, s3, inputfile, idfield)
+			out, err = routine_subgeographies(p, s3, inputfile, attr)
 		}
 
 	case "shp":
@@ -72,11 +71,11 @@ func cli() {
 
 	case "strip":
 		{
-			if len(selectfields) == 0 {
+			if len(fields) == 0 {
 				panic("No -s (select fields) given.")
 			}
 
-			out, err = vectors_strip(inputfile, selectfields, p)
+			out, err = vectors_strip(inputfile, fields, p)
 		}
 
 	case "rasterise":
@@ -101,7 +100,7 @@ func cli() {
 
 	case "ids-raster":
 		{
-			out, err = raster_ids(inputfile, idfield, 1000, p)
+			out, err = raster_ids(inputfile, attr, 1000, p)
 		}
 
 	case "clip":
@@ -115,11 +114,11 @@ func cli() {
 
 	case "csv":
 		{
-			if len(selectfields) == 0 {
+			if len(fields) == 0 {
 				panic("No -s (select fields) given.")
 			}
 
-			out, err = csv(inputfile, selectfields)
+			out, err = csv(inputfile, fields)
 		}
 
 	case "simplify":
@@ -133,16 +132,16 @@ func cli() {
 
 	case "csv-points":
 		{
-			if len(selectfields) == 0 {
+			if len(fields) == 0 {
 				println("No -s (select fields) given.")
 			}
 
-			out, err = csv_points(inputfile, [2]string{"Longitude", "Latitude"}, selectfields)
+			out, err = csv_points(inputfile, [2]string{"Longitude", "Latitude"}, fields)
 		}
 
 	case "admin-boundaries":
 		{
-			out, err = routine_admin_boundaries(nil, s3, inputfile, idfield, 1000)
+			out, err = routine_admin_boundaries(nil, s3, inputfile, attr, 1000)
 		}
 
 	case "routine-clip-proximity":
@@ -151,7 +150,7 @@ func cli() {
 				panic("No -r (referencefile) given:")
 			}
 
-			out, err = routine_clip_proximity(p, s3, inputfile, referencefile, []string{idfield}, 1000, 0.001)
+			out, err = routine_clip_proximity(p, s3, inputfile, referencefile, []string{attr}, 1000, 0.001)
 		}
 
 	case "routine-crop-raster":
