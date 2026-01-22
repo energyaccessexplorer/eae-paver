@@ -287,3 +287,28 @@ func routine_subgeographies(w reporter, s3 s3config, in filename, id string) (st
 
 	return string(jsonstr), nil
 }
+
+func routine_vectors_extra_attributes(w reporter, s3 s3config, in filename) (string, error) {
+	in = maybe_zip(in)
+	in = maybe_shp(in)
+
+	r, _ := vectors_features_extra_attrs(in, w)
+
+	w("CLEAN UP")
+
+	if run_server {
+		for i, f := range r {
+			r[i] = _uuid(r[i])
+
+			w("%s -> S3", f)
+			s3put(f, s3)
+			trash(f)
+		}
+	}
+
+	w("DONE")
+
+	jsonstr, _ := json.Marshal(r)
+
+	return string(jsonstr), nil
+}

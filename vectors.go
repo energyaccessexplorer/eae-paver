@@ -225,6 +225,40 @@ func vectors_features_split(in filename, id string, w reporter) (intstringdict, 
 	return results, nil
 }
 
+func vectors_features_extra_attrs(in filename, w reporter) (intstringdict, error) {
+	w("VECTORS FEATURES")
+
+	f := gdal.OpenDataSource(in, 0)
+	defer f.Destroy()
+	src := f.LayerByIndex(0)
+
+	results := make(intstringdict)
+
+	t := gdal.CreateSpatialReference("")
+	t.FromEPSG(3857)
+
+	for i := 0; i < vectors_feature_count(in); i++ {
+		f := src.Feature(int64(i))
+
+		g := f.Geometry()
+		g.TransformTo(t)
+
+		switch f.Geometry().Type() {
+
+		case gdal.GT_Polygon:
+			println("AREA: ", int(g.Area()))
+
+		case gdal.GT_LineString:
+			println("LENGTH: ", int(g.Length()))
+
+		case gdal.GT_MultiLineString:
+			println("LENGTH: ", int(g.Length()))
+		}
+	}
+
+	return results, nil
+}
+
 func vectors_feature_count(in filename) int {
 	f := gdal.OpenDataSource(in, 0)
 	defer f.Destroy()

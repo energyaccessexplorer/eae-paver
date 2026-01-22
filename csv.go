@@ -166,3 +166,38 @@ func csv_points(in filename, lnglat [2]string, sel []string) (filename, error) {
 
 	return out, nil
 }
+
+func csv_strip(in filename, sel []string) (filename, error) {
+	out := _filename()
+
+	if len(sel) == 0 {
+		sel = []string{"null"}
+	}
+
+	src, err := gdal.Open(in, 0)
+	if err != nil {
+		println("Exiting...")
+		return "", err
+	}
+	defer src.Close()
+
+	opts := []string{
+		"-f", "CSV",
+		"-sql", fmt.Sprintf(
+			"SELECT %s FROM \"%s\"",
+			strings.Join(sel, ","),
+			strings.Replace(path.Base(in), path.Ext(in), "", -1),
+		),
+	}
+
+	release := capture()
+	dest, err := gdal.Translate(out, src, opts)
+
+	result := release()
+	if err != nil {
+		return "", errors.New(result)
+	}
+	defer dest.Close()
+
+	return out, nil
+}

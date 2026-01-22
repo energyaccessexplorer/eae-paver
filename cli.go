@@ -59,6 +59,11 @@ func cli() {
 			out, err = routine_subgeographies(p, s3, inputfile, attr)
 		}
 
+	case "vectors-extra-attributes":
+		{
+			out, err = routine_vectors_extra_attributes(p, s3, inputfile)
+		}
+
 	case "shp":
 		{
 			out = maybe_shp(inputfile)
@@ -119,6 +124,15 @@ func cli() {
 			}
 
 			out, err = csv(inputfile, fields)
+		}
+
+	case "csv-strip":
+		{
+			if len(fields) == 0 {
+				panic("No -s (select fields) given.")
+			}
+
+			out, err = csv_strip(inputfile, fields)
 		}
 
 	case "simplify":
