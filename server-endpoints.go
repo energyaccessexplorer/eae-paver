@@ -25,6 +25,7 @@ var server_routines = map[string]server_routine{
 	"clip-proximity":   server_clip_proximity,
 	"crop-raster":      server_crop_raster,
 	"csv-points":       server_csv_points,
+	"csv-raster":       server_csv_raster,
 	"simplify":         server_simplify,
 	"subgeographies":   server_subgeographies,
 }
@@ -300,6 +301,38 @@ func server_subgeographies(r *http.Request, s *websocket.Conn) (string, error) {
 		datasetfile,
 		string(f["attr"]),
 	)
+
+	return jsonstr, nil
+}
+
+func server_csv_raster(r *http.Request, s *websocket.Conn) (string, error) {
+	f := formdata{
+		"s3bucket":     nil,
+		"dataseturl":   nil,
+		"referenceurl": nil,
+		"attr":         nil,
+		"lnglat":       nil,
+		"resolution":   nil,
+	}
+
+	ok, s3, datasetfile, referencefile, resolution, lnglat, err := server_prepare(&f, r)
+	if !ok {
+		return "", err
+	}
+
+	jsonstr, err := routine_csv_raster(
+		sw(r, s),
+		s3,
+		datasetfile,
+		referencefile,
+		lnglat,
+		string(f["attr"]),
+		resolution,
+	)
+
+	if err != nil {
+		return "", err
+	}
 
 	return jsonstr, nil
 }

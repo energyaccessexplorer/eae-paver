@@ -312,3 +312,54 @@ func routine_vectors_extra_attributes(w reporter, s3 s3config, in filename) (str
 
 	return string(jsonstr), nil
 }
+
+func routine_csv_raster(w reporter, s3 s3config, in filename, ref filename, lnglat [2]string, attr string, resolution int) (string, error) {
+	points, err := csv_points(in, lnglat, []string{attr})
+	if err != nil {
+		return "", err
+	}
+	w("%s <- csv points", points)
+
+	refprj, err := vectors_reproject(ref, 3857, w)
+	if err != nil {
+		return "", err
+	}
+	w("%s <- reprojected reference", refprj)
+
+	zeros, err := raster_zeros(refprj, resolution, w)
+	if err != nil {
+		return "", err
+	}
+	w("%s <- zeros", zeros)
+
+	clipped, err := vectors_clip(points, ref, w)
+	if err != nil {
+		return "", err
+	}
+	w("%s <- clipped", clipped)
+
+	rstr, err := raster_geometry_attr(clipped, zeros, attr, w)
+	if err != nil {
+		return "", err
+	}
+	w("%s <- rasterised", rstr)
+
+	w("CLEAN UP")
+	trash(in, ref, points, clipped, refprj)
+
+	if run_server {
+		keeps := []filename{rstr}
+
+		for _, f := range keeps {
+			w("%s -> S3", f)
+			s3put(f, s3)
+			trash(f)
+		}
+	}
+
+	w("DONE")
+
+	jsonstr := fmt.Sprintf(`{ "raster": "%s" }`, _uuid(rstr))
+
+	return jsonstr, nil
+}

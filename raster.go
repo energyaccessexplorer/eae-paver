@@ -88,6 +88,46 @@ func raster_geometry_ones(in filename, zs filename, w reporter) (filename, error
 	return zs, err
 }
 
+func raster_geometry_attr(in filename, zs filename, a string, w reporter) (filename, error) {
+	src, err := gdal.OpenEx(in, gdal.OFReadOnly, nil, nil, nil)
+	if err != nil {
+		return "", err
+	}
+
+	zeros, err := gdal.OpenEx(zs, gdal.OFUpdate, nil, nil, nil)
+	if err != nil {
+		return "", err
+	}
+
+	f := gdal.OpenDataSource(in, 0)
+	defer f.Destroy()
+
+	layer := f.LayerByIndex(0)
+
+	opts := []string{
+		"-l", layer.Name(),
+		"-a", a,
+	}
+
+	_, ok := layer.FeatureCount(false)
+	if !ok {
+		return "", errors.New("Could not get feature count")
+	}
+
+	release := capture()
+	err = gdal.RasterizeOverwrite(zeros, src, opts)
+
+	result := release()
+	if err != nil {
+		return "", errors.New(result)
+	}
+
+	zeros.Close()
+	src.Close()
+
+	return zs, err
+}
+
 func raster_proximity(in filename, w reporter) (filename, error) {
 	src, err := gdal.OpenEx(in, gdal.OFReadOnly, nil, nil, nil)
 	if err != nil {

@@ -153,6 +153,19 @@ func cli() {
 			out, err = csv_points(inputfile, [2]string{"Longitude", "Latitude"}, fields)
 		}
 
+	case "csv-raster":
+		{
+			if attr == "" {
+				println("No -s (select attr) given.")
+			}
+
+			if referencefile == "" {
+				panic("No -r (referencefile) given:")
+			}
+
+			out, err = routine_csv_raster(nil, s3, inputfile, referencefile, [2]string{"Longitude", "Latitude"}, attr, 1000)
+		}
+
 	case "admin-boundaries":
 		{
 			out, err = routine_admin_boundaries(nil, s3, inputfile, attr, 1000)
