@@ -140,7 +140,7 @@ func csv_points(in filename, lnglat [2]string, sel []string) (filename, error) {
 		"KEEP_GEOM_COLUMNS=YES",
 	}
 
-	src, err := gdal.OpenEx(in, gdal.OFReadOnly, nil, openopts, nil)
+	src, err := gdal.OpenEx(in, gdal.OFReadOnly, []string{"CSV"}, openopts, nil)
 	if err != nil {
 		return "", err
 	}
