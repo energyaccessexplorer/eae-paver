@@ -11,12 +11,9 @@ import (
 	"syscall"
 )
 
-var (
-	run_server bool
-	run_cli    bool
-)
-
 var UUID_REGEXP = regexp.MustCompile("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}")
+
+var run_server = true
 
 type filename = string
 
@@ -25,39 +22,14 @@ func main() {
 
 	logger_setup()
 
-	if run_server {
-		serve()
-	} else if run_cli {
-		cli()
-	} else {
-		panic("What am I supposed to do? I am just a program.")
-	}
+	serve()
 }
 
 func parse_flags() {
-	flag.BoolVar(&run_server, "server", false, "Should I server")
-	flag.BoolVar(&run_cli, "cli", false, "Should I CLI")
-
-	// CLI flags
-	//
-	flag.StringVar(&command, "c", "", "Subcommand")
-
-	flag.StringVar(&inputfile, "i", "", "File to be processed")
-	flag.StringVar(&targetfile, "t", "", "Target file to use as reference for clipping/cropping")
-	flag.StringVar(&referencefile, "r", "", "File to be used as reference")
-
-	flag.StringVar(&attr, "g", "OBJECTID", "blah blah")
-
-	flag.Var(&fields, "s", "Fields to extract from the features")
-
-	// SERVER flags
-	//
 	flag.StringVar(&pubkeyfile, "pubkey", "", "Public key file to check JWTs")
 	flag.StringVar(&socket, "socket", "/tmp/paver-server.sock", "Socket file to run on")
 	flag.StringVar(&logfilename, "log", "/tmp/paver.log", "")
-
 	flag.StringVar(&tmpdir, "tmpdir", "/tmp", "")
-
 	flag.StringVar(&buckets, "buckets", "/etc/paver-buckets.json", "")
 
 	flag.Parse()
