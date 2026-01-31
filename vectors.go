@@ -31,8 +31,6 @@ import (
 	"strings"
 )
 
-type intstringdict map[int64]string
-
 func vectors_strip(in filename, fields []string, w reporter) (filename, error) {
 	out := _filename()
 
@@ -186,7 +184,7 @@ func vectors_simplify(in filename, s float32, w reporter) (filename, error) {
 	return out, nil
 }
 
-func vectors_features_split(in filename, id string, w reporter) (intstringdict, error) {
+func vectors_features_split(in filename, id string, w reporter) (map[int64]string, error) {
 	w("VECTORS FEATURES")
 
 	f := gdal.OpenDataSource(in, 0)
@@ -197,7 +195,7 @@ func vectors_features_split(in filename, id string, w reporter) (intstringdict, 
 	s := gdal.CreateSpatialReference("")
 	s.FromEPSG(4326)
 
-	results := make(intstringdict)
+	results := make(map[int64]string)
 
 	for i := 0; i < vectors_feature_count(in); i++ {
 		f := src.Feature(int64(i))
@@ -225,14 +223,14 @@ func vectors_features_split(in filename, id string, w reporter) (intstringdict, 
 	return results, nil
 }
 
-func vectors_features_extra_attrs(in filename, w reporter) (intstringdict, error) {
+func vectors_features_extra_attrs(in filename, w reporter) (map[int64]string, error) {
 	w("VECTORS FEATURES")
 
 	f := gdal.OpenDataSource(in, 0)
 	defer f.Destroy()
 	src := f.LayerByIndex(0)
 
-	results := make(intstringdict)
+	results := make(map[int64]string)
 
 	t := gdal.CreateSpatialReference("")
 	t.FromEPSG(3857)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"io"
+	"log"
 	"os"
 	"regexp"
 	"syscall"
@@ -13,7 +14,19 @@ import (
 
 var UUID_REGEXP = regexp.MustCompile("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}")
 
-var run_server = true
+var (
+	run_server = true
+	pubkeyfile string
+	tmpdir     string
+	socket     string
+	buckets    string
+)
+
+var (
+	logfile     *os.File
+	logfilename string
+	logger      *log.Logger
+)
 
 type filename = string
 
@@ -33,6 +46,21 @@ func parse_flags() {
 	flag.StringVar(&buckets, "buckets", "/etc/paver-buckets.json", "")
 
 	flag.Parse()
+}
+
+func logger_setup() {
+	var err error
+
+	logfile, err = os.OpenFile(logfilename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	var logbuf bytes.Buffer
+	logger = log.New(&logbuf, "", log.LstdFlags)
+	logger.SetOutput(logfile)
+
+	println("Logging to:", logfilename)
 }
 
 func _filename() filename {

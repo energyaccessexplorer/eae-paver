@@ -7,48 +7,18 @@ import (
 	"gitlab.com/noop.nu/srv"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 )
 
-var (
-	pubkeyfile string
-	tmpdir     string
-	socket     string
-	buckets    string
-
-	logfile     *os.File
-	logfilename string
-	logger      *log.Logger
-)
-
-type formdata map[string][]byte
+type formdata map[string]string
 
 type H map[string]srv.Handler
 
-func logger_setup() {
-	var err error
-
-	logfile, err = os.OpenFile(logfilename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		panic(err)
-	}
-
-	var logbuf bytes.Buffer
-	logger = log.New(&logbuf, "", log.LstdFlags)
-	logger.SetOutput(logfile)
-
-	println("Logging to:", logfilename)
-}
-
 func serve() {
-	check_server_flags()
-
-	fmt.Printf("Temporary directory is '%s'\n", tmpdir)
-	fmt.Printf("Public key is: %s\n", pubkeyfile)
+	server_setup()
 
 	srv.Run(
 		socket,
@@ -61,7 +31,7 @@ func serve() {
 	)
 }
 
-func check_server_flags() {
+func server_setup() {
 	_, err := os.Stat(tmpdir)
 	if os.IsNotExist(err) {
 		logger.Println("Specified temporary directory does not exist. Creating...")
@@ -73,6 +43,9 @@ func check_server_flags() {
 		logger.Fatal("Specified temporary directory (still) does not exist!")
 	}
 	t.Close()
+
+	fmt.Printf("Temporary directory is '%s'\n", tmpdir)
+	fmt.Printf("Public key is: %s\n", pubkeyfile)
 }
 
 func uri_test(url string) (int, bool) {
@@ -121,7 +94,7 @@ func snatch(location string) (fname string, err error) {
 	return fname, nil
 }
 
-func form_parse(form *formdata, r *http.Request) (err error) {
+func form_parse(r *http.Request) (form formdata, err error) {
 	t := r.Header.Get("Content-Type")
 
 	if strings.HasPrefix(t, "multipart/form-data") {
@@ -141,11 +114,11 @@ func form_parse(form *formdata, r *http.Request) (err error) {
 				break
 			}
 
-			for k, _ := range *form {
+			for k, _ := range form {
 				if part.FormName() == k {
 					buf := new(bytes.Buffer)
 					buf.ReadFrom(part)
-					(*form)[k] = buf.Bytes()
+					form[k] = buf.String()
 				}
 			}
 		}
@@ -154,10 +127,10 @@ func form_parse(form *formdata, r *http.Request) (err error) {
 	if strings.HasPrefix(t, "application/x-www-form-urlencoded") {
 		r.ParseForm()
 
-		for k, _ := range *form {
-			(*form)[k] = []byte(r.FormValue(k))
+		for k, _ := range form {
+			form[k] = r.FormValue(k)
 		}
 	}
 
-	return err
+	return
 }

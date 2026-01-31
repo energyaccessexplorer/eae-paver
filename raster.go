@@ -202,7 +202,7 @@ func raster_zeros(in filename, res int, w reporter) (filename, error) {
 	return out, err
 }
 
-func raster_crop(in filename, base filename, ref filename, c raster_config, res int, w reporter) (filename, error) {
+func raster_crop(in filename, base filename, ref filename, rc raster_config, res int, w reporter) (filename, error) {
 	w("RASTER CROP")
 
 	r, err := gdal.OpenEx(base, gdal.OFReadOnly, nil, nil, nil)
@@ -229,9 +229,9 @@ func raster_crop(in filename, base filename, ref filename, c raster_config, res 
 	y := r.RasterYSize()
 
 	w(" raster size: (%d,%d)", x, y)
-	w(" numbertype: %s", c.Numbertype)
-	w(" nodata: %d", c.Nodata)
-	w(" resampling method: %s", c.Resample)
+	w(" numbertype: %s", rc.Numbertype)
+	w(" nodata: %d", rc.Nodata)
+	w(" resampling method: %s", rc.Resample)
 	w(" resolution: %d", res)
 
 	r_out := _filename()
@@ -240,7 +240,7 @@ func raster_crop(in filename, base filename, ref filename, c raster_config, res 
 		"-of", "GTiff",
 		"-t_srs", "EPSG:3857",
 		"-tr", strconv.Itoa(res), strconv.Itoa(res),
-		"-r", c.Resample,
+		"-r", rc.Resample,
 	}
 
 	release := capture()
@@ -261,8 +261,8 @@ func raster_crop(in filename, base filename, ref filename, c raster_config, res 
 		"-of", "GTiff",
 		"-ts", strconv.Itoa(x), strconv.Itoa(y),
 		"-t_srs", "EPSG:3857",
-		"-ot", c.Numbertype,
-		"-dstnodata", strconv.Itoa(c.Nodata),
+		"-ot", rc.Numbertype,
+		"-dstnodata", strconv.Itoa(rc.Nodata),
 		"-co", "COMPRESS=DEFLATE",
 		"-co", "PREDICTOR=1",
 		"-co", "ZLEVEL=9",

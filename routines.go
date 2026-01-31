@@ -5,7 +5,8 @@ import (
 	"fmt"
 )
 
-func routine_admin_boundaries(w reporter, s3 s3config, in filename, idfield string, resolution int) (string, error) {
+func routine_admin_boundaries(w reporter, p routine_params) (string, error) {
+	in := p.dataset
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
@@ -15,13 +16,13 @@ func routine_admin_boundaries(w reporter, s3 s3config, in filename, idfield stri
 	}
 	w("%s <- reprojected", rprj)
 
-	ids, err := raster_ids(rprj, idfield, resolution, w)
+	ids, err := raster_ids(rprj, p.attr, p.resolution, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- *raster ids", ids)
 
-	stripped, err := vectors_strip(rprj, []string{idfield}, w)
+	stripped, err := vectors_strip(rprj, []string{p.attr}, w)
 	if err != nil {
 		return "", err
 	}
@@ -35,21 +36,11 @@ func routine_admin_boundaries(w reporter, s3 s3config, in filename, idfield stri
 
 	info := vectors_info(rprjstripped)
 
-	w("CLEAN UP")
-
-	trash(rprj, stripped)
-
-	if run_server {
-		keeps := []filename{ids, rprjstripped}
-
-		for _, f := range keeps {
-			w("%s -> S3", f)
-			s3put(f, s3)
-			trash(f)
-		}
-	}
-
-	w("DONE")
+	cleanup(
+		[]filename{ids, rprjstripped},
+		[]filename{rprj, stripped},
+		w, p.s3,
+	)
 
 	jinfo, err := json.Marshal(info)
 	if err != nil {
@@ -66,11 +57,12 @@ func routine_admin_boundaries(w reporter, s3 s3config, in filename, idfield stri
 	return jsonstr, nil
 }
 
-func routine_simplify(w reporter, s3 s3config, in filename, factor float32, idfield string, resolution int) (string, error) {
+func routine_simplify(w reporter, p routine_params) (string, error) {
+	in := p.dataset
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
-	simpl, err := vectors_simplify(in, factor, w)
+	simpl, err := vectors_simplify(in, p.simplify, w)
 	if err != nil {
 		return "", err
 	}
@@ -82,52 +74,47 @@ func routine_simplify(w reporter, s3 s3config, in filename, factor float32, idfi
 	}
 	w("%s <- reprojected", prj)
 
-	ids, err := raster_ids(prj, idfield, resolution, w)
+	ids, err := raster_ids(prj, p.attr, p.resolution, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- *raster ids", ids)
 
-	if run_server {
-		keeps := []filename{simpl, ids}
-
-		for _, f := range keeps {
-			w("%s -> S3", f)
-			s3put(f, s3)
-			trash(f)
-		}
-	}
-
-	w("DONE")
+	cleanup(
+		[]filename{simpl, ids},
+		[]filename{},
+		w, p.s3,
+	)
 
 	jsonstr := fmt.Sprintf(`{ "vectors": "%s", "raster": "%s" }`, _uuid(simpl), _uuid(ids))
 
 	return jsonstr, nil
 }
 
-func routine_clip_proximity(w reporter, s3 s3config, in filename, ref filename, fields []string, resolution int, simplify float32) (string, error) {
+func routine_clip_proximity(w reporter, p routine_params) (string, error) {
+	in := p.dataset
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
-	stripped, err := vectors_strip(in, fields, w)
+	stripped, err := vectors_strip(in, p.fields, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- stripped", stripped)
 
-	refprj, err := vectors_reproject(ref, 3857, w)
+	refprj, err := vectors_reproject(p.reference, 3857, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- reprojected reference", refprj)
 
-	zeros, err := raster_zeros(refprj, resolution, w)
+	zeros, err := raster_zeros(refprj, p.resolution, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- zeros", zeros)
 
-	simpl, err := vectors_simplify(ref, simplify, w)
+	simpl, err := vectors_simplify(p.reference, p.simplify, w)
 	if err != nil {
 		return "", err
 	}
@@ -151,46 +138,37 @@ func routine_clip_proximity(w reporter, s3 s3config, in filename, ref filename, 
 	}
 	w("%s <- *proximity", prox)
 
-	w("CLEAN UP")
-	trash(in, ref, stripped, rstr, refprj, simpl)
-
-	if run_server {
-		keeps := []filename{clipped, prox}
-
-		for _, f := range keeps {
-			w("%s -> S3", f)
-			s3put(f, s3)
-			trash(f)
-		}
-	}
-
-	w("DONE")
+	cleanup(
+		[]filename{clipped, prox},
+		[]filename{in, p.reference, stripped, rstr, refprj, simpl},
+		w, p.s3,
+	)
 
 	jsonstr := fmt.Sprintf(`{ "vectors": "%s", "raster": "%s" }`, _uuid(clipped), _uuid(prox))
 
 	return jsonstr, nil
 }
 
-func routine_csv_points(w reporter, s3 s3config, in filename, ref filename, lnglat [2]string, fields []string, resolution int) (string, error) {
-	points, err := csv_points(in, lnglat, fields)
+func routine_csv_points(w reporter, p routine_params) (string, error) {
+	points, err := csv_points(p.dataset, p.lnglat, p.fields)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- csv points", points)
 
-	refprj, err := vectors_reproject(ref, 3857, w)
+	refprj, err := vectors_reproject(p.reference, 3857, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- reprojected reference", refprj)
 
-	zeros, err := raster_zeros(refprj, resolution, w)
+	zeros, err := raster_zeros(refprj, p.resolution, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- zeros", zeros)
 
-	clipped, err := vectors_clip(points, ref, w)
+	clipped, err := vectors_clip(points, p.reference, w)
 	if err != nil {
 		return "", err
 	}
@@ -208,158 +186,133 @@ func routine_csv_points(w reporter, s3 s3config, in filename, ref filename, lngl
 	}
 	w("%s <- *proximity", prox)
 
-	w("CLEAN UP")
-	trash(in, ref, points, rstr, refprj)
-
-	if run_server {
-		keeps := []filename{clipped, prox}
-
-		for _, f := range keeps {
-			w("%s -> S3", f)
-			s3put(f, s3)
-			trash(f)
-		}
-	}
-
-	w("DONE")
+	cleanup(
+		[]filename{clipped, prox},
+		[]filename{p.dataset, p.reference, points, rstr, refprj},
+		w, p.s3,
+	)
 
 	jsonstr := fmt.Sprintf(`{ "vectors": "%s", "raster": "%s" }`, _uuid(clipped), _uuid(prox))
 
 	return jsonstr, nil
 }
 
-func routine_crop_raster(w reporter, s3 s3config, in filename, base filename, ref filename, conf string, resolution int) (string, error) {
+func routine_crop_raster(w reporter, p routine_params) (string, error) {
+	in := p.dataset
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
-	var c raster_config
-	err := json.Unmarshal([]byte(conf), &c)
+	var rc raster_config
+	err := json.Unmarshal([]byte(p.config), &rc)
 	if err != nil {
 		return "", err
 	}
 
-	cropped, err := raster_crop(in, base, ref, c, resolution, w)
+	cropped, err := raster_crop(in, p.base, p.reference, rc, p.resolution, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- cropped", cropped)
 
-	w("CLEAN UP")
-
-	if run_server {
-		keeps := []filename{cropped}
-
-		for _, f := range keeps {
-			w("%s -> S3", f)
-			s3put(f, s3)
-			trash(f)
-		}
-	}
-
-	w("DONE")
+	cleanup(
+		[]filename{cropped},
+		[]filename{},
+		w, p.s3,
+	)
 
 	jsonstr := fmt.Sprintf(`{ "raster": "%s" }`, _uuid(cropped))
 
 	return jsonstr, nil
 }
 
-func routine_subgeographies(w reporter, s3 s3config, in filename, id string) (string, error) {
+func routine_subgeographies(w reporter, p routine_params) (string, error) {
+	in := p.dataset
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
-	r, _ := vectors_features_split(in, id, w)
+	r, _ := vectors_features_split(in, p.attr, w)
 
-	w("CLEAN UP")
-
-	if run_server {
-		for i, f := range r {
-			r[i] = _uuid(r[i])
-
-			w("%s -> S3", f)
-			s3put(f, s3)
-			trash(f)
-		}
+	for i, f := range r {
+		r[i] = _uuid(r[i])
+		cleanup([]filename{f}, []filename{}, w, p.s3)
 	}
-
-	w("DONE")
 
 	jsonstr, _ := json.Marshal(r)
 
 	return string(jsonstr), nil
 }
 
-func routine_vectors_extra_attributes(w reporter, s3 s3config, in filename) (string, error) {
+func routine_vectors_extra_attributes(w reporter, p routine_params) (string, error) {
+	in := p.dataset
 	in = maybe_zip(in)
 	in = maybe_shp(in)
 
 	r, _ := vectors_features_extra_attrs(in, w)
 
-	w("CLEAN UP")
-
-	if run_server {
-		for i, f := range r {
-			r[i] = _uuid(r[i])
-
-			w("%s -> S3", f)
-			s3put(f, s3)
-			trash(f)
-		}
+	for i, f := range r {
+		r[i] = _uuid(r[i])
+		cleanup([]filename{f}, []filename{}, w, p.s3)
 	}
-
-	w("DONE")
 
 	jsonstr, _ := json.Marshal(r)
 
 	return string(jsonstr), nil
 }
 
-func routine_csv_raster(w reporter, s3 s3config, in filename, ref filename, lnglat [2]string, attr string, resolution int) (string, error) {
-	points, err := csv_points(in, lnglat, []string{attr})
+func routine_csv_raster(w reporter, p routine_params) (string, error) {
+	in := p.dataset
+
+	points, err := csv_points(in, p.lnglat, []string{p.attr})
 	if err != nil {
 		return "", err
 	}
 	w("%s <- csv points", points)
 
-	refprj, err := vectors_reproject(ref, 3857, w)
+	refprj, err := vectors_reproject(p.reference, 3857, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- reprojected reference", refprj)
 
-	zeros, err := raster_zeros(refprj, resolution, w)
+	zeros, err := raster_zeros(refprj, p.resolution, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- zeros", zeros)
 
-	clipped, err := vectors_clip(points, ref, w)
+	clipped, err := vectors_clip(points, p.reference, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- clipped", clipped)
 
-	rstr, err := raster_geometry_attr(clipped, zeros, attr, w)
+	rstr, err := raster_geometry_attr(clipped, zeros, p.attr, w)
 	if err != nil {
 		return "", err
 	}
 	w("%s <- rasterised", rstr)
 
-	w("CLEAN UP")
-	trash(in, ref, points, clipped, refprj)
-
-	if run_server {
-		keeps := []filename{rstr}
-
-		for _, f := range keeps {
-			w("%s -> S3", f)
-			s3put(f, s3)
-			trash(f)
-		}
-	}
-
-	w("DONE")
+	cleanup(
+		[]filename{rstr},
+		[]filename{in, p.reference, points, clipped, refprj},
+		w, p.s3,
+	)
 
 	jsonstr := fmt.Sprintf(`{ "raster": "%s" }`, _uuid(rstr))
 
 	return jsonstr, nil
+}
+
+func cleanup(keeps []filename, deletes []filename, w reporter, s3 s3config) {
+	w("CLEAN UP")
+
+	trash(deletes...)
+
+	for _, f := range keeps {
+		w("%s -> S3", f)
+		s3put(f, s3)
+		trash(f)
+	}
+
+	w("DONE")
 }
