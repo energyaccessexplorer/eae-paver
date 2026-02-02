@@ -44,6 +44,7 @@ func serve() {
 			{"/check", nil, H{"GET": _check}},
 			{"/socket", nil, H{"GET": _socket}},
 			{"/routines", []string{"*"}, H{"POST": _routines}},
+			{"/s3-presigned", []string{"*"}, H{"GET": s3presigned_handler}},
 		},
 		pubkeyfile,
 	)

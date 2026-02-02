@@ -19,7 +19,7 @@ func socket_write(s *websocket.Conn, m string, r *http.Request) string {
 	}
 
 	if s == nil {
-		fmt.Println(m)
+		logger.Println(m)
 		return m
 	}
 
@@ -30,7 +30,7 @@ func socket_write(s *websocket.Conn, m string, r *http.Request) string {
 
 func socket_destroy(id string, s *websocket.Conn, m string) {
 	if s == nil {
-		fmt.Println(m)
+		logger.Println(m)
 		return
 	}
 

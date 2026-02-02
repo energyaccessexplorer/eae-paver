@@ -343,7 +343,7 @@ func maybe_shp(in filename) string {
 
 	os.Setenv("SHAPE_RESTORE_SHX", "YES")
 	cmd := exec.Command("ogr2ogr", "-f", "GeoJSON", out, in)
-	fmt.Println(cmd.Output())
+	cmd.Output()
 
 	return out
 }
