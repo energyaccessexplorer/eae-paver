@@ -257,6 +257,45 @@ func vectors_features_extra_attrs(in filename, w reporter) (map[int64]string, er
 	return results, nil
 }
 
+func vectors_dissolve(in filename, fields []string, w reporter) (out filename, err error) {
+	out = _filename()
+
+	release := capture()
+	f, err := gdal.OpenEx(in, gdal.OFVector, nil, nil, nil)
+	src := f.LayerByIndex(0)
+	defer f.Close()
+
+	fs := strings.Join(fields, ", ")
+
+	layer := f.ExecuteSQL(
+		fmt.Sprintf(
+			`SELECT ROW_NUMBER() OVER() AS id, %s, ST_Union(geometry) AS geometry FROM %s GROUP BY %s`,
+			fs, src.Name(), fs),
+		gdal.Geometry{},
+		"SQLITE",
+	)
+
+	drv, _ := gdal.GetDriverByName("GeoJSON")
+	ds := drv.Create(out, 0, 0, 0, gdal.Unknown, []string{})
+	defer ds.Close()
+
+	s := gdal.CreateSpatialReference("")
+	s.FromEPSG(4326)
+
+	ds.CopyLayer(layer, "Layer0", []string{})
+	f.ReleaseResultSet(layer)
+
+	result := release()
+	w(result)
+
+	if err != nil {
+		w(err.Error())
+		return "", err
+	}
+
+	return out, nil
+}
+
 func vectors_feature_count(in filename) int {
 	f := gdal.OpenDataSource(in, 0)
 	defer f.Destroy()

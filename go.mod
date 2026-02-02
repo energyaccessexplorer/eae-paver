@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
 	github.com/coder/websocket v1.8.14
-	github.com/energyaccessexplorer/gdal v0.0.0-20260116161509-08b8d606ef09
+	github.com/energyaccessexplorer/gdal v0.0.0-20260201114537-dd6153438ce6
 	github.com/satori/go.uuid v1.2.0
 	gitlab.com/noop.nu/srv v0.0.0-20250324204206-0fe3a996755a
 )

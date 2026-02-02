@@ -5,6 +5,20 @@ import (
 	"fmt"
 )
 
+func cleanup(keeps []filename, deletes []filename, w reporter, s3 s3config) {
+	w("CLEAN UP")
+
+	trash(deletes...)
+
+	for _, f := range keeps {
+		w("%s -> S3", f)
+		s3put(f, s3)
+		trash(f)
+	}
+
+	w("DONE")
+}
+
 func routine_admin_boundaries(w reporter, p routine_params) (string, error) {
 	in := p.Dataset
 	in = maybe_zip(in)
@@ -126,7 +140,21 @@ func routine_clip_proximity(w reporter, p routine_params) (string, error) {
 	}
 	w("%s <- *clipped", clipped)
 
-	rstr, err := raster_geometry_ones(clipped, zeros, w)
+	last := clipped
+
+	if p.Dissolve {
+		dissolved, err := vectors_dissolve(clipped, p.Fields, w)
+		if err != nil {
+			return "", err
+		}
+		w("%s <- *dissolved", dissolved)
+
+		last = dissolved
+
+		trash(clipped)
+	}
+
+	rstr, err := raster_geometry_ones(last, zeros, w)
 	if err != nil {
 		return "", err
 	}
@@ -139,12 +167,12 @@ func routine_clip_proximity(w reporter, p routine_params) (string, error) {
 	w("%s <- *proximity", prox)
 
 	cleanup(
-		[]filename{clipped, prox},
-		[]filename{in, p.Reference, stripped, rstr, refprj, simpl},
+		[]filename{last, prox},
+		[]filename{stripped, rstr, refprj, simpl},
 		w, p.S3,
 	)
 
-	jsonstr := fmt.Sprintf(`{ "vectors": "%s", "raster": "%s" }`, _uuid(clipped), _uuid(prox))
+	jsonstr := fmt.Sprintf(`{ "vectors": "%s", "raster": "%s" }`, _uuid(last), _uuid(prox))
 
 	return jsonstr, nil
 }
@@ -188,7 +216,7 @@ func routine_csv_points(w reporter, p routine_params) (string, error) {
 
 	cleanup(
 		[]filename{clipped, prox},
-		[]filename{p.Dataset, p.Reference, points, rstr, refprj},
+		[]filename{points, rstr, refprj},
 		w, p.S3,
 	)
 
@@ -288,25 +316,11 @@ func routine_csv_raster(w reporter, p routine_params) (string, error) {
 
 	cleanup(
 		[]filename{rstr},
-		[]filename{in, p.Reference, points, clipped, refprj},
+		[]filename{points, clipped, refprj},
 		w, p.S3,
 	)
 
 	jsonstr := fmt.Sprintf(`{ "raster": "%s" }`, _uuid(rstr))
 
 	return jsonstr, nil
-}
-
-func cleanup(keeps []filename, deletes []filename, w reporter, s3 s3config) {
-	w("CLEAN UP")
-
-	trash(deletes...)
-
-	for _, f := range keeps {
-		w("%s -> S3", f)
-		s3put(f, s3)
-		trash(f)
-	}
-
-	w("DONE")
 }
