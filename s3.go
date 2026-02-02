@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -75,7 +74,7 @@ func s3put(fname filename, s3 s3config) bool {
 	}
 	contentmd5 := base64.StdEncoding.EncodeToString(chksum.Sum(nil))
 
-	content, _ := ioutil.ReadFile(fname)
+	content, _ := os.ReadFile(fname)
 	contenttype := http.DetectContentType(content)
 
 	timestamp := s3timestamp()
@@ -110,7 +109,7 @@ func s3put(fname filename, s3 s3config) bool {
 
 	file.Close()
 
-	c, err := ioutil.ReadAll(r.Body)
+	c, err := io.ReadAll(r.Body)
 	if err != nil {
 		logger.Println(r.Status, err.Error(), c)
 		return false

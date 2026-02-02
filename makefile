@@ -7,7 +7,6 @@ export PAVER_SOCKET := ${PAVER_SOCKET}
 export PAVER_WORKDIR := ${PAVER_WORKDIR}
 export PAVER_USER := ${PAVER_USER}
 export PAVER_CMD := paver \
-	-server \
 	-pubkey ${PAVER_PUBKEY} \
 	-socket ${PAVER_SOCKET} \
 	-buckets ${PAVER_BUCKETS}

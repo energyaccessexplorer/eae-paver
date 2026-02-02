@@ -1,21 +1,39 @@
 package main
 
 import (
-	"bytes"
-	"errors"
+	"encoding/json"
 	"fmt"
+	"github.com/coder/websocket"
 	"gitlab.com/noop.nu/srv"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 )
 
-type formdata map[string]string
-
 type H map[string]srv.Handler
+
+type reporter func(string, ...any) string
+
+type routine func(reporter, routine_params) (string, error)
+
+type routine_params struct {
+	S3         s3config      `json:"s3"`
+	Dataset    string        `json:"dataseturl"`
+	Reference  string        `json:"referenceurl"`
+	Base       string        `json:"baseurl"`
+	Resolution int           `json:"resolution"`
+	Simplify   float32       `json:"simplify"`
+	LngLat     [2]string     `json:"lnglat"`
+	Attr       string        `json:"attr"`
+	Fields     []string      `json:"fields"`
+	Config     raster_config `json:"config"`
+	Dissolve   bool          `json:"dissolve"`
+}
+
+type server_routine struct {
+	fn       routine
+	required []string
+}
 
 func serve() {
 	server_setup()
@@ -48,89 +66,149 @@ func server_setup() {
 	fmt.Printf("Public key is: %s\n", pubkeyfile)
 }
 
-func uri_test(url string) (int, bool) {
-	if !strings.HasPrefix(url, "http") {
-		return http.StatusBadRequest, false
+func sw(r *http.Request, k *websocket.Conn) reporter {
+	return func(s string, x ...any) string {
+		return socket_write(k, fmt.Sprintf(s+"\n", x...), r)
 	}
-
-	resp, _ := http.Head(url)
-
-	return resp.StatusCode, (resp.StatusCode == http.StatusOK)
 }
 
-func snatch(location string) (fname string, err error) {
-	fname = _filename()
+var server_routines = map[string]server_routine{
+	"admin-boundaries": {
+		routine_admin_boundaries,
+		[]string{
+			"s3bucket",
+			"dataseturl",
+			"attr",
+			"resolution",
+		},
+	},
+	"simplify": {
+		routine_simplify,
+		[]string{
+			"s3bucket",
+			"dataseturl",
+			"simplify",
+			"resolution",
+			"attr",
+		}},
+	"clip-proximity": {
+		routine_clip_proximity,
+		[]string{
+			"s3bucket",
+			"dataseturl",
+			"referenceurl",
+			"fields",
+			"resolution",
+			"simplify",
+		},
+	},
+	"csv-points": {
+		routine_csv_points,
+		[]string{
+			"s3bucket",
+			"dataseturl",
+			"referenceurl",
+			"fields",
+			"lnglat",
+			"resolution",
+		}},
+	"csv-raster": {
+		routine_csv_raster,
+		[]string{
+			"s3bucket",
+			"dataseturl",
+			"referenceurl",
+			"attr",
+			"lnglat",
+			"resolution",
+		}},
+	"crop-raster": {
+		routine_crop_raster,
+		[]string{
+			"s3bucket",
+			"dataseturl",
+			"baseurl",
+			"referenceurl",
+			"config",
+			"resolution",
+		},
+	},
+	"subgeographies": {
+		routine_subgeographies,
+		[]string{
+			"s3bucket",
+			"dataseturl",
+			"attr",
+		}},
+}
 
-	for _, x := range []string{"geojson", "shp", "tiff"} {
-		if strings.HasSuffix(location, "."+x) {
-			fname += "." + x
-			break
-		}
-	}
-
-	if status, ok := uri_test(location); !ok {
-		err = errors.New("Could not fetch '" + location + "' - Error: " + strconv.Itoa(status))
+func _routines(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("routine")
+	if q == "" {
+		http.Error(w, "Routine (q)uery parameter is not optional", 405)
 		return
 	}
 
-	resp, e := http.Get(location)
-	if e != nil {
-		return "", e
+	var rtn server_routine
+	var has bool
+	if rtn, has = server_routines[q]; !has {
+		http.Error(w, "Unknown routine: "+q, 405)
+		return
 	}
-	defer resp.Body.Close()
 
-	file, err := os.Create(fname)
+	sid := r.URL.Query().Get("socket_id")
+	s := socket_table[sid]
+
+	var jb map[string]interface{}
+
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-
-	if _, err := io.Copy(file, bytes.NewReader(body)); err != nil {
-		return "", err
+		http.Error(w, err.Error(), 500)
+		return
 	}
 
-	return fname, nil
-}
+	if err = json.Unmarshal(body, &jb); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 
-func form_parse(r *http.Request) (form formdata, err error) {
-	t := r.Header.Get("Content-Type")
-
-	if strings.HasPrefix(t, "multipart/form-data") {
-		reader, e := r.MultipartReader()
-
-		if e != nil {
-			err = e
+	for _, x := range rtn.required {
+		if _, ok := jb[x]; !ok {
+			http.Error(w, fmt.Sprintf("Incomplete payload. Missing '%s'", x), 400)
 			return
 		}
-
-		r.ParseMultipartForm(0) // do not use any memory - it all goes to disk.
-
-		for {
-			part, e := reader.NextPart()
-
-			if e == io.EOF {
-				break
-			}
-
-			for k, _ := range form {
-				if part.FormName() == k {
-					buf := new(bytes.Buffer)
-					buf.ReadFrom(part)
-					form[k] = buf.String()
-				}
-			}
-		}
 	}
 
-	if strings.HasPrefix(t, "application/x-www-form-urlencoded") {
-		r.ParseForm()
+	p := routine_params{}
 
-		for k, _ := range form {
-			form[k] = r.FormValue(k)
-		}
+	s3bucket := jb["s3bucket"].(string)
+	p.S3, _ = s3config_get(s3bucket)
+	if err != nil || p.S3.Key == "" {
+		http.Error(w, fmt.Sprintf("No such bucket: '%s'", s3bucket), 400)
+		return
 	}
 
-	return
+	defer r.Body.Close()
+	if err := json.Unmarshal(body, &p); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if jsonstr, err := rtn.fn(sw(r, s), p); err == nil {
+		fmt.Fprintf(w, jsonstr)
+	} else {
+		j, _ := json.Marshal(map[string]string{"error": err.Error()})
+		http.Error(w, string(j), 400)
+	}
+
+	defer socket_destroy(sid, s, "routine finished")
+}
+
+func _socket(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	socket_create(id, w, r)
+}
+
+func _check(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "TJA!")
 }

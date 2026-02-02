@@ -18,12 +18,22 @@ func socket_write(s *websocket.Conn, m string, r *http.Request) string {
 		return ""
 	}
 
+	if s == nil {
+		fmt.Println(m)
+		return m
+	}
+
 	s.Write(r.Context(), websocket.MessageText, []byte(m))
 
 	return m
 }
 
 func socket_destroy(id string, s *websocket.Conn, m string) {
+	if s == nil {
+		fmt.Println(m)
+		return
+	}
+
 	s.Close(websocket.StatusNormalClosure, m)
 	delete(socket_table, id)
 }
