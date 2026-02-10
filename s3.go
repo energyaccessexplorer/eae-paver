@@ -5,9 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	s3signer "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -122,7 +121,7 @@ func s3presigned(platform string, method string, directory string, filename stri
 
 	cli := s3.NewPresignClient(s3.NewFromConfig(c))
 
-	var request *s3signer.PresignedHTTPRequest
+	var request *v4.PresignedHTTPRequest
 	if method == "GET" {
 		request, err = cli.PresignGetObject(ctx, &s3.GetObjectInput{
 			Bucket: aws.String(conf.Bucket),
@@ -138,39 +137,5 @@ func s3presigned(platform string, method string, directory string, filename stri
 		return
 	}
 
-	return request.URL, nil
-}
-
-func s3presigned_handler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "OPTIONS":
-		w.Header().Set("Allow", "GET")
-		w.WriteHeader(200)
-
-	case "GET":
-		q := r.URL.Query()
-		directory := q.Get("directory")
-		filename := q.Get("filename")
-		platform := q.Get("s3")
-		method := q.Get("method")
-
-		_p := []string{"directory", "filename", "platform", "method"}
-		for i, v := range []string{directory, filename, platform, method} {
-			if v == "" {
-				http.Error(w, fmt.Sprintf("Missing '%s' parameter", _p[i]), 400)
-				return
-			}
-		}
-
-		url, err := s3presigned(platform, method, directory, filename)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		w.Write([]byte(url))
-
-	default:
-		w.WriteHeader(405)
-	}
+	return request.URL, err
 }

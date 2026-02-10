@@ -44,7 +44,7 @@ func serve() {
 			{"/check", nil, H{"GET": _check}},
 			{"/socket", nil, H{"GET": _socket}},
 			{"/routines", []string{"*"}, H{"POST": _routines}},
-			{"/s3-presigned", []string{"*"}, H{"GET": s3presigned_handler}},
+			{"/s3-presigned", []string{"*"}, H{"GET": _s3presigned_handler}},
 		},
 		pubkeyfile,
 	)
@@ -146,7 +146,7 @@ var server_routines = map[string]server_routine{
 func _routines(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("routine")
 	if q == "" {
-		http.Error(w, "Routine (q)uery parameter is not optional", 405)
+		http.Error(w, "Routine (q)uery parameter is not optional", 400)
 		return
 	}
 
@@ -164,12 +164,14 @@ func _routines(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		logger.Println("_routines: Failed to read request body: \n", err.Error(), q, sid)
+		http.Error(w, "Failed to read request body", 500)
 		return
 	}
 
 	if err = json.Unmarshal(body, &jb); err != nil {
-		http.Error(w, err.Error(), 500)
+		logger.Println("_routines failed: json.Unmarshall to map[string]: \n", err.Error(), body)
+		http.Error(w, "Failed to parse request json", 500)
 		return
 	}
 
@@ -191,6 +193,7 @@ func _routines(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 	if err := json.Unmarshal(body, &p); err != nil {
+		logger.Println("_routines failed: json.Unmarshall to routine_params: \n", err.Error(), body)
 		http.Error(w, err.Error(), 400)
 		return
 	}
@@ -212,4 +215,39 @@ func _socket(w http.ResponseWriter, r *http.Request) {
 
 func _check(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "TJA!")
+}
+
+func _s3presigned_handler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "OPTIONS":
+		w.Header().Set("Allow", "GET")
+		w.WriteHeader(200)
+
+	case "GET":
+		q := r.URL.Query()
+		directory := q.Get("directory")
+		filename := q.Get("filename")
+		platform := q.Get("s3")
+		method := q.Get("method")
+
+		_p := []string{"directory", "filename", "platform", "method"}
+		for i, v := range []string{directory, filename, platform, method} {
+			if v == "" {
+				http.Error(w, fmt.Sprintf("Missing '%s' parameter", _p[i]), 400)
+				return
+			}
+		}
+
+		url, err := s3presigned(platform, method, directory, filename)
+		if err != nil {
+			logger.Println("_s3presigned_handler failed: s3presigned: \n", err.Error(), q)
+			http.Error(w, "S3 configuration error", 500)
+			return
+		}
+
+		w.Write([]byte(url))
+
+	default:
+		w.WriteHeader(405)
+	}
 }
